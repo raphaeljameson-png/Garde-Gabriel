@@ -160,23 +160,12 @@
 
 <script>
 /* ═══════════════════════════════════════════════════════
-   GARDE GABRIEL — v9 — AUDIT COMPLET DU JUGEMENT 06/02/2026
-   ═══════════════════════════════════════════════════════
-   HIÉRARCHIE :
-   1. Exception manuelle
-   2. Fête des Mères / Pères
-   3. Vacances scolaires (PRIMAUTÉ ABSOLUE)
-   4. Fêtes juives (Papa, sauf si pendant vacances)
-   5. Jours fériés attenants (extension de la période)
-   6. Roulement :
-      - Semaines PAIRES : Ven→Lun = PAPA
-      - Semaines IMPAIRES : Mer→Jeu = PAPA
-      - Reste = MAMAN
+   GARDE GABRIEL — v12 — JUGEMENT 06/02/2026 + RÈGLES PRATIQUES
    ═══════════════════════════════════════════════════════ */
 
-if(localStorage.getItem('app_version')!=='v9'){
+if(localStorage.getItem('app_version')!=='v12'){
     ['gabriel_school_holidays','gabriel_religious_holidays','gabriel_last_sync'].forEach(k=>localStorage.removeItem(k));
-    localStorage.setItem('app_version','v9');
+    localStorage.setItem('app_version','v12');
 }
 
 let exceptions=JSON.parse(localStorage.getItem('gabriel_exceptions')||'{}');
@@ -185,10 +174,7 @@ const saveEx=()=>localStorage.setItem('gabriel_exceptions',JSON.stringify(except
 const d2s=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 const s2d=s=>{const[y,m,j]=s.split('-').map(Number);return new Date(y,m-1,j,12,0,0)};
 
-// Gabriel né le 21/09/2022 → 6 ans révolus le 21/09/2028
-const GABRIEL_6ANS = new Date(2028,8,21,12,0,0);
-
-/* ── VACANCES SCOLAIRES Zone C étendu 2024-2030 ── */
+/* ── VACANCES SCOLAIRES Zone C ── */
 let schoolHols=JSON.parse(localStorage.getItem('gabriel_school_holidays')||'null')||[
     {n:"Toussaint",s:"2024-10-19",e:"2024-11-03",mid:"2024-10-26"},
     {n:"Noël",s:"2024-12-21",e:"2025-01-05",mid:"2024-12-28"},
@@ -232,7 +218,7 @@ let relHols=JSON.parse(localStorage.getItem('gabriel_religious_holidays')||'null
     "2026-03-03":"Pourim","2026-04-02":"Pessah (J1)","2026-04-03":"Pessah (J2)"
 };
 
-/* ── FÊTE DES MÈRES (dernier dimanche de mai, décalé si Pentecôte) ── */
+/* ── FÊTE DES MÈRES ── */
 function getMothersDay(yr){
     let fdm=new Date(yr,4,31,12,0,0);
     while(fdm.getDay()!==0) fdm.setDate(fdm.getDate()-1);
@@ -243,7 +229,7 @@ function getMothersDay(yr){
     return d2s(fdm);
 }
 
-/* ── JOURS FÉRIÉS FRANÇAIS ── */
+/* ── JOURS FÉRIÉS ── */
 function getPH(year){
     const a=year%19,b=Math.floor(year/100),c=year%100,d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451),mo=Math.floor((h+l-7*m+114)/31),da=((h+l-7*m+114)%31)+1;
     const easter=new Date(year,mo-1,da,12,0,0);
@@ -251,7 +237,6 @@ function getPH(year){
     return new Set([`${year}-01-01`,`${year}-05-01`,`${year}-05-08`,`${year}-07-14`,`${year}-08-15`,`${year}-11-01`,`${year}-11-11`,`${year}-12-25`,add(1),add(39),add(50)]);
 }
 
-/* ── NUMÉRO DE SEMAINE ISO ── */
 function isoWeek(date){
     const tmp=new Date(Date.UTC(date.getFullYear(),date.getMonth(),date.getDate()));
     const dayN=tmp.getUTCDay()||7;
@@ -261,103 +246,95 @@ function isoWeek(date){
 }
 
 /* ══════════════════════════════════════════
-   ALGORITHME PRINCIPAL — JUGEMENT 06/02/2026
-   Pages 7-8, dispositif exact
+   ALGORITHME PRINCIPAL
    ══════════════════════════════════════════ */
 function getCustody(date){
     const ds=d2s(date);
     const yr=date.getFullYear();
-    const dow=date.getDay(); // 0=Dim, 1=Lun ... 6=Sam
+    const dow=date.getDay(); 
 
-    /* ── 1. EXCEPTION MANUELLE ── */
     if(exceptions[ds]) return{who:exceptions[ds],why:"Exception manuelle",forced:true};
 
-    /* ── 2. FÊTE DES MÈRES / PÈRES ── */
     if(ds===getMothersDay(yr)) return{who:"Maman",why:"Fête des Mères 💐"};
     const fdp=new Date(yr,5,1,12,0,0);let sc=0;
     while(sc<3){if(fdp.getDay()===0)sc++;if(sc<3)fdp.setDate(fdp.getDate()+1)}
     if(ds===d2s(fdp)) return{who:"Papa",why:"Fête des Pères 👔"};
 
-    /* ── 3. VACANCES SCOLAIRES (PRIMAUTÉ ABSOLUE) ── */
+    /* ── VACANCES SCOLAIRES ── */
     const t=date.getTime();
     for(const h of schoolHols){
-        const tStart=s2d(h.s).getTime(), tEnd=s2d(h.e).getTime();
-        if(t<tStart||t>tEnd) continue;
+        const startH = s2d(h.s);
+        // Les vacances incluent le vendredi soir post-école
+        const firstNight = new Date(startH);
+        firstNight.setDate(firstNight.getDate() - 1); 
         
-        // L'année de référence = année de DÉBUT des vacances (pour l'alternance pair/impair)
+        const endH = s2d(h.e); 
+        // fin de boucle si on est hors période
+        if(t < firstNight.getTime() || t > endH.getTime()) continue;
+        
         const startYear=parseInt(h.s.split('-')[0]);
         const isEvenYear=(startYear%2===0);
 
         if(h.summer){
-            // Jugement p.7 : "l'été étant partagé par quinzaine jusqu'aux 6 ans révolus"
-            const isFirstHalf=date.getDate()<=15;
-            // Même règle que petites vacances : impaire→1ère moitié Papa, paire→2ème moitié Papa
-            const papaHas=isEvenYear ? !isFirstHalf : isFirstHalf;
-            return{who:papaHas?"Papa":"Maman",why:`Vacances d'Été (${isFirstHalf?'1ère':'2ème'} quinzaine)`};
+            // Grandes vacances : blocs de 14 jours stricts, calés sur les samedis à midi
+            const sat2 = new Date(startH); sat2.setDate(sat2.getDate() + 14);
+            const sat3 = new Date(startH); sat3.setDate(sat3.getDate() + 28);
+            const sat4 = new Date(startH); sat4.setDate(sat4.getDate() + 42);
+
+            let block = 0;
+            if (t >= sat4.getTime()) block = 3;
+            else if (t >= sat3.getTime()) block = 2;
+            else if (t >= sat2.getTime()) block = 1;
+
+            const isPapaBlockEvenYear = (block === 1 || block === 3);
+            const isPapaBlockOddYear = (block === 0 || block === 2);
+            const papaHas = isEvenYear ? isPapaBlockEvenYear : isPapaBlockOddYear;
+            
+            const blockNames = ["1ère quinzaine de Juillet", "2ème quinzaine de Juillet", "1ère quinzaine d'Août", "2ème quinzaine d'Août"];
+            return {who: papaHas ? "Papa" : "Maman", why: `Été (${blockNames[block]})`};
+            
         } else {
-            // Jugement p.7 : "la première moitié les années impaires, la seconde moitié les années paires"
-            const midTime=s2d(h.mid).getTime();
-            const isFirst=(t<midTime); // Le samedi du milieu lui-même → 2ème moitié (transition à 12h)
-            const papaHas=isEvenYear ? !isFirst : isFirst;
-            return{who:papaHas?"Papa":"Maman",why:`Vacances ${h.n} (${isFirst?'1ère':'2ème'} moitié)`};
+            // Petites vacances
+            const midH = s2d(h.mid);
+            // si t < midH (samedi), ça couvre jusqu'à la nuit du vendredi au samedi incluse.
+            const isFirst = (t < midH.getTime());
+            const papaHas = isEvenYear ? !isFirst : isFirst;
+            return {who: papaHas ? "Papa" : "Maman", why: `Vacances ${h.n} (${isFirst ? '1ère' : '2ème'} moitié)`};
         }
     }
 
-    /* ── 4. FÊTES JUIVES (Papa, sauf pendant vacances — déjà filtré ci-dessus) ── */
-    if(relHols[ds]) return{who:"Papa",why:`${relHols[ds]}`};
+    if(relHols[ds]) {
+        const relParent = (yr % 2 === 0) ? "Papa" : "Maman";
+        return{who: relParent, why:`${relHols[ds]} (${relParent})`, rel: true};
+    }
 
-    /* ── 5. JOURS FÉRIÉS ATTENANTS ── 
-       Jugement p.8 : "au cas où des jours fériés précéderaient ou suivraient 
-       immédiatement le début ou la fin de la période d'exercice du droit de 
-       visite et d'hébergement, celui-ci s'exercera sur l'intégralité de la période"
-       
-       Concrètement : si un jour férié touche directement un bloc Papa, il est absorbé par Papa.
-    */
     const ph=getPH(yr);
-    if(ph.has(ds)){
-        // Vérifier si la veille ou le lendemain est un jour Papa (roulement)
-        const yesterday=new Date(date);yesterday.setDate(date.getDate()-1);
-        const tomorrow=new Date(date);tomorrow.setDate(date.getDate()+1);
-        const ywk=isoWeek(yesterday), twk=isoWeek(tomorrow);
-        const ydow=yesterday.getDay(), tdow=tomorrow.getDay();
-        
-        // La veille était-elle un jour Papa par roulement ?
-        const yEven=(ywk%2===0);
-        const yesterdayPapa=(yEven&&(ydow===5||ydow===6||ydow===0||ydow===1))||((!yEven)&&(ydow===3||ydow===4));
-        
-        // Le lendemain sera-t-il un jour Papa par roulement ?
-        const tEven=(twk%2===0);
-        const tomorrowPapa=(tEven&&(tdow===5||tdow===6||tdow===0||tdow===1))||((!tEven)&&(tdow===3||tdow===4));
-        
-        if(yesterdayPapa||tomorrowPapa){
-            return{who:"Papa",why:"Jour férié attenant (période Papa étendue)",ferie:true};
-        }
-    }
-
-    /* ── 6. ROULEMENT CLASSIQUE ── 
-       Jugement p.7 :
-       "les fins de semaines PAIRES, du VENDREDI sortie des classes au LUNDI matin rentrée des classes"
-       → Ven + Sam + Dim + Lun = Papa
-       
-       "du MERCREDI sortie des classes les semaines IMPAIRES au JEUDI matin rentrée des classes"
-       → Mer + Jeu = Papa
-       
-       Tout le reste = Maman (résidence habituelle)
-    */
     const weekNo=isoWeek(date);
-    const even=(weekNo%2===0);
+    const isEvenWk=(weekNo%2===0);
+    const tomorrow = new Date(date); tomorrow.setDate(date.getDate() + 1);
+    const tomorrowDS = d2s(tomorrow);
 
-    // Semaines PAIRES : Vendredi → Lundi
-    if(even && (dow===5||dow===6||dow===0||dow===1)){
-        return{who:"Papa",why:`S${weekNo} (paire) — Week-end Papa (ven→lun)`};
+    if(dow===1 && isEvenWk && ph.has(ds)) {
+        return {who:"Papa", why:"Férié le lundi (prolonge le week-end)", ferie:true};
+    }
+    if(dow===4 && !isEvenWk && ph.has(ds)) {
+        return {who:"Papa", why:"Férié le jeudi (prolonge le mercredi)", ferie:true};
+    }
+    if(dow===4 && isEvenWk && ph.has(tomorrowDS)) {
+        return {who:"Papa", why:"Férié le vendredi (anticipe le week-end)", ferie:true};
+    }
+    if(dow===2 && !isEvenWk && ph.has(tomorrowDS)) {
+        return {who:"Papa", why:"Férié le mercredi (anticipe le mercredi)", ferie:true};
     }
 
-    // Semaines IMPAIRES : Mercredi → Jeudi
-    if(!even && (dow===3||dow===4)){
-        return{who:"Papa",why:`S${weekNo} (impaire) — Mercredi Papa (mer→jeu)`};
+    /* ── ROULEMENT NORMAL ── */
+    if(isEvenWk && (dow===5||dow===6||dow===0)){
+        return{who:"Papa",why:`S${weekNo} (paire) — Week-end Papa`};
+    }
+    if(!isEvenWk && (dow===3)){
+        return{who:"Papa",why:`S${weekNo} (impaire) — Nuit du Mercredi`};
     }
 
-    // Tout le reste
     return{who:"Maman",why:"Résidence habituelle"};
 }
 
@@ -394,11 +371,11 @@ function renderCal(){
     const todayS=d2s(new Date());
     for(let d=1;d<=new Date(yr,mo+1,0).getDate();d++){
         const date=new Date(yr,mo,d,12,0,0);const ds=d2s(date);
-        const c=getCustody(date);const isRel=!!relHols[ds];
+        const c=getCustody(date);
         let cls=`day ${c.who==='Papa'?'papa':'maman'}`;
         if(ds===todayS)cls+=' today';
         if(c.forced)cls+=' exc';
-        if(isRel)cls+=' rel';
+        if(c.rel)cls+=' rel';
         if(c.ferie)cls+=' fer';
         g.innerHTML+=`<div class="${cls}" onclick="toggleDay('${ds}')">${d}</div>`;
     }
@@ -420,11 +397,11 @@ function renderYear(){
         for(let i=0;i<skip;i++) html+=`<div></div>`;
         for(let d=1;d<=new Date(yrView,m+1,0).getDate();d++){
             const date=new Date(yrView,m,d,12,0,0);const ds=d2s(date);
-            const c=getCustody(date);const isRel=!!relHols[ds];
+            const c=getCustody(date);
             let cls=`md ${c.who==='Papa'?'papa':'maman'}`;
             if(ds===todayS)cls+=' today';
             if(c.forced)cls+=' exc';
-            if(isRel)cls+=' rel';
+            if(c.rel)cls+=' rel';
             if(c.ferie)cls+=' fer';
             html+=`<div class="${cls}">${d}</div>`;
         }
