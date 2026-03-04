@@ -30,6 +30,7 @@
         .view.on{display:block}
         @keyframes fu{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
         h1{font-size:32px;font-weight:700;letter-spacing:-.5px;margin:0 0 18px}
+        .version-tag{text-align:center;font-size:11px;color:var(--muted);margin-top:-10px;margin-bottom:15px}
         h2{font-size:20px;font-weight:600;margin:0 0 12px}
         .card{background:var(--card);border-radius:12px;margin-bottom:18px;overflow:hidden}
         .row{display:flex;justify-content:space-between;align-items:center;padding:13px 16px;border-bottom:.5px solid var(--border);font-size:15px}
@@ -77,7 +78,7 @@
         .dist-lbl{display:flex;justify-content:space-between;font-size:13px;font-weight:600}
         .sync-info{text-align:center;font-size:11px;color:var(--muted);margin-top:16px}
         @media print {
-            .tabbar,.btn,.seg-ctrl,.cal-nav,h1,.sync-info{display:none!important}
+            .tabbar,.btn,.seg-ctrl,.cal-nav,h1,.version-tag,.sync-info{display:none!important}
             body,.app{background:white!important;box-shadow:none!important;padding:0!important}
             .view{display:none!important;padding:0!important} .view.on{display:block!important}
             .card{border:1px solid #ccc;box-shadow:none;break-inside:avoid}
@@ -88,6 +89,7 @@
 <div class="app">
     <div id="v-today" class="view on">
         <h1>Aujourd'hui</h1>
+        <div class="version-tag">v1.0 — Publié le 04/03/2026 à 22:47</div>
         <div class="hero">
             <div class="hero-date" id="t-date"></div>
             <div class="circle" id="t-circle"></div>
