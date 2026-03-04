@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Garde Gabriel</title>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect fill=%22%23007AFF%22 width=%22100%22 height=%22100%22 rx=%2220%22/><text y=%2250%22 x=%2250%22 fill=%22white%22 font-family=%22sans-serif%22 font-size=%2240%22 dominant-baseline=%22central%22 text-anchor=%22middle%22>G</text></svg>">
+    
+    <style>
+        :root {
+            /* iOS Light Theme */
+            --desktop-bg: #e5e5ea;
+            --app-bg: #f2f2f7;
+            --text-main: #000000;
+            --text-muted: #8e8e93;
+            --card-bg: #ffffff;
+            --tab-bg: rgba(255, 255, 255, 0.85);
+            --border-color: rgba(60, 60, 67, 0.29);
+            --papa-color: #007AFF;
+            --maman-color: #FF3B30;
+            --papa-bg: rgba(0, 122, 255, 0.12);
+            --maman-bg: rgba(255, 59, 48, 0.12);
+            --seg-bg: rgba(118, 118, 128, 0.12);
+            --seg-active: #ffffff;
+            --safe-area-bottom: env(safe-area-inset-bottom, 20px);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                /* iOS Dark Theme */
+                --desktop-bg: #111111;
+                --app-bg: #000000;
+                --text-main: #ffffff;
+                --text-muted: rgba(235, 235, 245, 0.6);
+                --card-bg: #1c1c1e;
+                --tab-bg: rgba(28, 28, 30, 0.85);
+                --border-color: rgba(84, 84, 88, 0.65);
+                --papa-bg: rgba(10, 132, 255, 0.25);
+                --maman-bg: rgba(255, 69, 58, 0.25);
+                --seg-bg: rgba(118, 118, 128, 0.24);
+                --seg-active: #636366;
+            }
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            margin: 0; padding: 0;
+            background-color: var(--desktop-bg);
+            display: flex;
+            justify-content: center;
+        }
+
+        /* Conteneur principal */
+        .app-container {
+            width: 100%;
+            max-width: 450px;
+            background-color: var(--app-bg);
+            color: var(--text-main);
+            min-height: 100vh;
+            position: relative;
+            box-shadow: 0 0 40px rgba(0, 0, 0, 0.1);
+            overflow-x: hidden;
+            padding-bottom: calc(80px + var(--safe-area-bottom));
+        }
+
+        h1 { font-size: 34px; font-weight: 700; letter-spacing: -0.5px; margin: 0 0 20px; }
+        h2 { font-size: 22px; font-weight: 600; letter-spacing: -0.3px; margin: 0 0 15px; }
+
+        /* Tabs */
+        .tab-bar {
+            position: fixed; bottom: 0;
+            left: 50%; transform: translateX(-50%);
+            width: 100%; max-width: 450px;
+            height: calc(55px + var(--safe-area-bottom));
+            background: var(--tab-bg);
+            backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
+            border-top: 0.5px solid var(--border-color);
+            display: flex; justify-content: space-around;
+            padding-bottom: var(--safe-area-bottom);
+            z-index: 1000;
+        }
+
+        .tab-item {
+            flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            color: var(--text-muted); font-size: 10px; font-weight: 500; cursor: pointer;
+            transition: color 0.2s;
+        }
+        .tab-item.active { color: var(--papa-color); }
+        .tab-icon { font-size: 24px; margin-bottom: 2px; }
+
+        /* Views */
+        .view {
+            display: none; padding: 20px; padding-top: max(30px, env(safe-area-inset-top));
+            animation: slideUpFade 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+        .view.active { display: block; }
+        @keyframes slideUpFade { 
+            from { opacity: 0; transform: translateY(10px); } 
+            to { opacity: 1; transform: translateY(0); } 
+        }
+
+        /* Cartes et Listes style iOS */
+        .ios-list {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            margin-bottom: 24px;
+            overflow: hidden;
+        }
+        .ios-list-row {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 14px 16px;
+            border-bottom: 0.5px solid var(--border-color);
+            font-size: 16px;
+        }
+        .ios-list-row:last-child { border-bottom: none; }
+        
+        .row-left { display: flex; flex-direction: column; }
+        .row-title { font-weight: 500; }
+        .row-subtitle { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+        
+        .tag-papa { color: var(--papa-color); font-weight: 600; }
+        .tag-maman { color: var(--maman-color); font-weight: 600; }
+        .pct { font-size: 13px; font-weight: 400; opacity: 0.8; }
+
+        /* Segmented Control iOS */
+        .segmented-control {
+            display: flex; background-color: var(--seg-bg);
+            border-radius: 9px; padding: 2px; margin-bottom: 24px;
+        }
+        .segment {
+            flex: 1; text-align: center; padding: 6px 0;
+            font-size: 13px; font-weight: 600; border-radius: 7px;
+            cursor: pointer; color: var(--text-main);
+            transition: all 0.2s ease-in-out;
+        }
+        .segment.active {
+            background-color: var(--seg-active);
+            box-shadow: 0 3px 8px rgba(0,0,0,0.12), 0 3px 1px rgba(0,0,0,0.04);
+        }
+
+        /* Cercle de statut */
+        .today-status { text-align: center; padding: 20px 10px; }
+        .status-circle {
+            width: 140px; height: 140px; border-radius: 70px; margin: 0 auto 20px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 28px; font-weight: 700; letter-spacing: -0.5px;
+            transition: transform 0.2s;
+        }
+        .status-circle.papa { background-color: var(--papa-bg); color: var(--papa-color); border: 4px solid var(--papa-color); }
+        .status-circle.maman { background-color: var(--maman-bg); color: var(--maman-color); border: 4px solid var(--maman-color); }
+
+        /* Boutons */
+        .btn {
+            background-color: var(--papa-color); color: white; border: none; border-radius: 12px;
+            padding: 14px 20px; font-size: 17px; font-weight: 600; width: 100%; cursor: pointer; 
+            margin-top: 10px; display: block; text-align: center;
+        }
+        .btn:active { opacity: 0.8; }
+        .btn-outline { background-color: transparent; color: var(--papa-color); border: 1px solid var(--papa-color); }
+
+        /* Calendar (Mensuel) */
+        .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 0 10px; }
+        .calendar-nav { background: var(--seg-bg); border: none; border-radius: 50%; width: 32px; height: 32px; color: var(--text-main); font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; text-align: center; padding: 0 5px; }
+        .day-name { font-size: 13px; font-weight: 500; color: var(--text-muted); margin-bottom: 8px; }
+        .day { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 500; border-radius: 50%; cursor: pointer; transition: all 0.2s; }
+        
+        .day.papa { background-color: var(--papa-bg); color: var(--papa-color); }
+        .day.maman { background-color: var(--maman-bg); color: var(--maman-color); }
+        .day.empty { visibility: hidden; }
+        
+        .day.today { border: 2.5px solid var(--text-main); font-weight: 700; }
+        .day.exception { position: relative; }
+        .day.exception::after { content: ''; position: absolute; bottom: 3px; width: 4px; height: 4px; background: #FF9500; border-radius: 50%; }
+
+        /* Calendar (Annuel) */
+        .year-grid-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            padding: 10px 0;
+        }
+        .mini-month {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 12px;
+        }
+        .mini-month-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            text-align: center;
+            color: var(--text-main);
+        }
+        .mini-calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 3px;
+            text-align: center;
+        }
+        .mini-day-name {
+            font-size: 9px;
+            font-weight: 500;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+        .mini-day {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: 500;
+            border-radius: 50%;
+        }
+        .mini-day.papa { background-color: var(--papa-bg); color: var(--papa-color); }
+        .mini-day.maman { background-color: var(--maman-bg); color: var(--maman-color); }
+        .mini-day.today { border: 1.5px solid var(--text-main); font-weight: 700; }
+        .mini-day.exception { border: 1px solid #FF9500; }
+
+        .legend-container {
+            margin-top: 25px; display: flex; gap: 15px; justify-content: center; font-size: 13px; color: var(--text-muted);
+        }
+
+        /* ----- STYLES SPÉCIAUX POUR L'IMPRESSION (A4) ----- */
+        @media print {
+            /* Forcer le format A4 paysage pour l'année, et demander l'impression des couleurs de fond */
+            @page { size: A4 landscape; margin: 12mm; }
+            
+            * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            /* Cacher ce qui est inutile sur papier */
+            .tab-bar, .btn, .segmented-control, .calendar-nav, h1 { 
+                display: none !important; 
+            }
+            
+            /* Réinitialiser le conteneur principal pour prendre toute la page */
+            body, .app-container { 
+                background: white !important; 
+            }
+            .app-container { 
+                box-shadow: none !important; 
+                max-width: 100% !important; 
+                padding: 0 !important; 
+                margin: 0 !important;
+            }
+            
+            /* Ne garder que la vue active */
+            .view { padding: 0 !important; animation: none !important; display: none !important; }
+            .view.active { display: block !important; }
+
+            /* Mise en forme de l'entête (titre) */
+            .calendar-header {
+                background: transparent !important;
+                padding: 0 !important;
+                margin-bottom: 15px !important;
+                border: none !important;
+                justify-content: center !important;
+            }
+            #year-view-title, #calendar-month-year {
+                font-size: 24pt !important;
+                text-align: center;
+                width: 100%;
+                color: black !important;
+                margin: 0 !important;
+            }
+
+            /* Grille de 4 colonnes x 3 lignes pour le calendrier annuel */
+            .year-grid-container {
+                display: grid !important;
+                grid-template-columns: repeat(4, 1fr) !important;
+                grid-template-rows: repeat(3, auto) !important;
+                gap: 15px !important;
+                padding: 0 !important;
+            }
+
+            /* Style des blocs "Mois" sur le papier */
+            .mini-month {
+                background: white !important;
+                border: 1px solid #ddd !important;
+                padding: 10px !important;
+                border-radius: 8px !important;
+                break-inside: avoid;
+                page-break-inside: avoid;
+            }
+
+            .mini-month-title {
+                font-size: 12pt !important;
+                color: black !important;
+                margin-bottom: 8px !important;
+            }
+            .mini-day-name { font-size: 8pt !important; }
+            .mini-day { font-size: 9pt !important; }
+
+            /* Ajustements spécifiques pour la vue "Mois" si imprimée */
+            .calendar-grid { gap: 15px !important; }
+            .day { font-size: 16pt !important; }
+
+            .legend-container {
+                margin-top: 15px !important;
+                font-size: 10pt !important;
+                color: black !important;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+
+    <!-- ONGLET: AUJOURD'HUI -->
+    <div id="view-today" class="view active">
+        <h1>Aujourd'hui</h1>
+        
+        <div class="today-status">
+            <h2 id="today-date" style="font-size: 18px; color: var(--text-muted); font-weight: 500; margin-bottom: 25px;"></h2>
+            <div id="today-circle" class="status-circle"></div>
+            <h3 id="today-reason" style="font-size: 15px; color: var(--text-muted); font-weight: 400; margin-top: 15px; padding: 0 20px; line-height: 1.4;"></h3>
+            
+            <button class="btn btn-outline" style="margin-top: 35px;" onclick="forceException()">Forcer un changement exceptionnel</button>
+        </div>
+
+        <h2 style="margin-top: 20px;">À venir</h2>
+        <div class="ios-list" id="upcoming-list"></div>
+    </div>
+
+    <!-- ONGLET: MOIS -->
+    <div id="view-calendar" class="view">
+        <h1>Mois</h1>
+        
+        <div class="ios-list" style="padding: 20px 10px;">
+            <div class="calendar-header">
+                <button class="calendar-nav" onclick="changeMonth(-1)">❮</button>
+                <h2 id="calendar-month-year" style="margin: 0; font-size: 18px;"></h2>
+                <button class="calendar-nav" onclick="changeMonth(1)">❯</button>
+            </div>
+            <div class="calendar-grid" id="calendar-days"></div>
+        </div>
+        
+        <div style="display: flex; gap: 10px;">
+            <button class="btn btn-outline" style="margin-top: 0; flex: 1;" onclick="goToToday()">Ce mois-ci</button>
+            <button class="btn btn-outline" style="margin-top: 0; flex: 1;" onclick="window.print()">Imprimer</button>
+        </div>
+        
+        <div class="legend-container">
+            <span style="display: flex; align-items: center; gap: 4px;"><span style="color: var(--papa-color);">●</span> Papa</span>
+            <span style="display: flex; align-items: center; gap: 4px;"><span style="color: var(--maman-color);">●</span> Maman</span>
+            <span style="display: flex; align-items: center; gap: 4px;"><span style="color: #ff9500;">●</span> Modifié</span>
+        </div>
+    </div>
+
+    <!-- ONGLET: ANNÉE -->
+    <div id="view-year" class="view">
+        <h1>Année</h1>
+        
+        <div class="calendar-header" style="background: var(--card-bg); padding: 15px; border-radius: 12px; margin-bottom: 15px;">
+            <button class="calendar-nav" onclick="changeYearView(-1)">❮</button>
+            <h2 id="year-view-title" style="margin: 0; font-size: 20px;"></h2>
+            <button class="calendar-nav" onclick="changeYearView(1)">❯</button>
+        </div>
+
+        <div id="year-grid-container" class="year-grid-container">
+            <!-- Rempli par JavaScript -->
+        </div>
+
+        <div class="legend-container" style="margin-top: 15px; margin-bottom: 15px;">
+            <span style="display: flex; align-items: center; gap: 4px;"><span style="color: var(--papa-color);">●</span> Papa</span>
+            <span style="display: flex; align-items: center; gap: 4px;"><span style="color: var(--maman-color);">●</span> Maman</span>
+            <span style="display: flex; align-items: center; gap: 4px;"><span style="color: #ff9500;">●</span> Modifié</span>
+        </div>
+
+        <div style="display: flex; gap: 10px;">
+            <button class="btn btn-outline" style="margin-top: 0; flex: 1;" onclick="goToCurrentYear()">Année en cours</button>
+            <button class="btn btn-outline" style="margin-top: 0; flex: 1;" onclick="window.print()">Imprimer</button>
+        </div>
+    </div>
+
+    <!-- ONGLET: STATS -->
+    <div id="view-stats" class="view">
+        <h1>Statistiques</h1>
+        
+        <div class="segmented-control">
+            <div class="segment active" id="stat-tab-months" onclick="switchStatTab('months')">Mois par mois</div>
+            <div class="segment" id="stat-tab-years" onclick="switchStatTab('years')">Années civiles</div>
+        </div>
+
+        <div id="stats-months-view">
+            <div class="ios-list" id="stats-months-list"></div>
+        </div>
+
+        <div id="stats-years-view" style="display: none;">
+            <div class="ios-list" id="stats-years-list"></div>
+        </div>
+
+        <button class="btn" style="margin-top: 25px;" onclick="exportICS()">Exporter au format iCal (.ics)</button>
+        <p style="text-align: center; font-size: 13px; color: var(--text-muted); margin-top: 15px; line-height: 1.4;">
+            Permet d'ajouter le roulement dans le calendrier Apple, Google ou Outlook.
+        </p>
+    </div>
+
+    <!-- TAB BAR -->
+    <div class="tab-bar">
+        <a class="tab-item active" onclick="switchTab('today', this)">
+            <span class="tab-icon">🏠</span>
+            <span>Aujourd'hui</span>
+        </a>
+        <a class="tab-item" onclick="switchTab('calendar', this)">
+            <span class="tab-icon">📅</span>
+            <span>Mois</span>
+        </a>
+        <a class="tab-item" onclick="switchTab('year', this)">
+            <span class="tab-icon">🗓️</span>
+            <span>Année</span>
+        </a>
+        <a class="tab-item" onclick="switchTab('stats', this)">
+            <span class="tab-icon">📊</span>
+            <span>Stats</span>
+        </a>
+    </div>
+
+</div>
+
+    <script>
+        // --- BASE DE DONNÉES LOCALE ---
+        let exceptions = JSON.parse(localStorage.getItem('gabriel_exceptions')) || {};
+
+        // --- DATES EXACTES VACANCES ZONE C ---
+        const schoolHolidays = [
+            { name: "Toussaint", start: "2024-10-19", end: "2024-11-03", midSaturday: "2024-10-26" },
+            { name: "Noël", start: "2024-12-21", end: "2025-01-05", midSaturday: "2024-12-28" },
+            { name: "Hiver", start: "2025-02-15", end: "2025-03-02", midSaturday: "2025-02-22" },
+            { name: "Printemps", start: "2025-04-12", end: "2025-04-27", midSaturday: "2025-04-19" },
+            { name: "Été", start: "2025-07-05", end: "2025-08-31", isSummer: true },
+            { name: "Toussaint", start: "2025-10-18", end: "2025-11-02", midSaturday: "2025-10-25" },
+            { name: "Noël", start: "2025-12-20", end: "2026-01-04", midSaturday: "2025-12-27" },
+            { name: "Hiver", start: "2026-02-21", end: "2026-03-08", midSaturday: "2026-02-28" },
+            { name: "Printemps", start: "2026-04-25", end: "2026-05-10", midSaturday: "2026-05-02" },
+            { name: "Été", start: "2026-07-04", end: "2026-08-31", isSummer: true },
+            { name: "Toussaint", start: "2026-10-17", end: "2026-11-01", midSaturday: "2026-10-24" },
+            { name: "Noël", start: "2026-12-19", end: "2027-01-03", midSaturday: "2026-12-26" },
+            { name: "Hiver", start: "2027-02-20", end: "2027-03-07", midSaturday: "2027-02-27" },
+            { name: "Printemps", start: "2027-04-24", end: "2027-05-09", midSaturday: "2027-05-01" },
+            { name: "Été", start: "2027-07-03", end: "2027-08-31", isSummer: true }
+        ];
+
+        // --- FÊTES RELIGIEUSES ---
+        const religiousHolidays = {
+            "2024-10-03": "Roch Hachana", "2024-10-12": "Kippour", "2024-12-26": "Hanoukka",
+            "2025-03-14": "Pourim", "2025-04-13": "Pessah", "2025-04-14": "Pessah", "2025-09-23": "Roch Hachana", "2025-10-02": "Kippour",
+            "2026-03-03": "Pourim", "2026-04-02": "Pessah", "2026-04-03": "Pessah", "2026-09-12": "Roch Hachana", "2026-09-21": "Kippour",
+            "2027-03-23": "Pourim", "2027-04-22": "Pessah", "2027-04-23": "Pessah", "2027-10-02": "Roch Hachana", "2027-10-11": "Kippour"
+        };
+
+        function getStr(date) { return date.toISOString().split('T')[0]; }
+
+        function getActiveHoliday(date) {
+            const time = date.getTime();
+            for(let h of schoolHolidays) {
+                let start = new Date(h.start).getTime();
+                let end = new Date(h.end).getTime();
+                if(time >= start && time <= end) return h;
+            }
+            return null;
+        }
+
+        function getParentsDay(date) {
+            const y = date.getFullYear();
+            const mothersDay = new Date(y, 4, 31 - new Date(y, 4, 31).getDay());
+            const fathersDay = new Date(y, 5, 1);
+            fathersDay.setDate(fathersDay.getDate() + (7 - fathersDay.getDay()) + 14);
+
+            if (getStr(date) === getStr(mothersDay)) return "Mères";
+            if (getStr(date) === getStr(fathersDay)) return "Pères";
+            return null;
+        }
+
+        // --- ALGO DE GARDE ---
+        function getCustody(date) {
+            const dateStr = getStr(date);
+            const year = date.getFullYear();
+            const isEvenYear = (year % 2 === 0);
+            
+            if (exceptions[dateStr]) return { status: exceptions[dateStr], reason: "Exception manuelle", forced: true };
+
+            const pDay = getParentsDay(date);
+            if (pDay === "Mères") return { status: "Maman", reason: "Fête des Mères" };
+            if (pDay === "Pères") return { status: "Papa", reason: "Fête des Pères" };
+
+            const holiday = getActiveHoliday(date);
+            const rHoliday = religiousHolidays[dateStr];
+
+            if (holiday) {
+                const holidayYear = parseInt(holiday.start.split('-')[0]);
+                const isEvenHolidayYear = (holidayYear % 2 === 0);
+
+                if (holiday.isSummer) {
+                    const day = date.getDate();
+                    const isFirstFortnight = day <= 15;
+                    let papaHasBlock = isEvenHolidayYear ? !isFirstFortnight : isFirstFortnight;
+                    return { status: papaHasBlock ? "Papa" : "Maman", reason: `Vacances Été` };
+                } else {
+                    const midDate = new Date(holiday.midSaturday);
+                    midDate.setHours(12, 0, 0); 
+                    
+                    const isFirstHalf = date.getTime() < midDate.getTime();
+                    let papaHasHoliday = isEvenHolidayYear ? !isFirstHalf : isFirstHalf;
+                    return { status: papaHasHoliday ? "Papa" : "Maman", reason: `Vacances ${holiday.name}` };
+                }
+            }
+
+            if (rHoliday) {
+                return { status: isEvenYear ? "Papa" : "Maman", reason: `Fête juive (${rHoliday})` };
+            }
+
+            let d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+            let dayNum = d.getUTCDay() || 7;
+            d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+            let yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
+            let weekNo = Math.ceil((((d - yearStart) / 86400000) + 1)/7);
+            
+            const isEvenWeek = (weekNo % 2 === 0);
+            const dayOfWeek = date.getDay();
+
+            if (isEvenWeek) {
+                if (dayOfWeek === 5 || dayOfWeek === 6 || dayOfWeek === 0) return { status: "Papa", reason: "Semaine Paire (Week-end)" };
+            } else {
+                if (dayOfWeek === 3) return { status: "Papa", reason: "Semaine Impaire (Mercredi)" };
+            }
+
+            return { status: "Maman", reason: "Roulement classique" };
+        }
+
+        // --- ONGLET: AUJOURD'HUI ---
+        function renderToday() {
+            const today = new Date();
+            const custody = getCustody(today);
+            
+            document.getElementById('today-date').innerText = today.toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            
+            const circle = document.getElementById('today-circle');
+            circle.className = `status-circle ${custody.status.toLowerCase()}`;
+            circle.innerText = custody.status;
+            
+            document.getElementById('today-reason').innerText = custody.reason + (custody.forced ? " (Modifié manuellement)" : "");
+
+            const list = document.getElementById('upcoming-list');
+            list.innerHTML = "";
+            let currentStatus = custody.status;
+            let changesFound = 0;
+            
+            for(let i=1; i<=90 && changesFound < 5; i++) {
+                let d = new Date(today);
+                d.setDate(today.getDate() + i);
+                let c = getCustody(d);
+                if(c.status !== currentStatus) {
+                    const dateStr = d.toLocaleDateString('fr-FR', {weekday:'short', day:'numeric', month:'short'});
+                    list.innerHTML += `
+                        <div class="ios-list-row">
+                            <div class="row-left">
+                                <span class="row-title">${dateStr}</span>
+                                <span class="row-subtitle">${c.reason}</span>
+                            </div>
+                            <span class="tag-${c.status.toLowerCase()}">${c.status}</span>
+                        </div>
+                    `;
+                    currentStatus = c.status;
+                    changesFound++;
+                }
+            }
+        }
+
+        function forceException() {
+            const todayStr = getStr(new Date());
+            const current = getCustody(new Date()).status;
+            const newStatus = current === "Papa" ? "Maman" : "Papa";
+            if(confirm(`Basculer exceptionnellement la garde d'aujourd'hui à ${newStatus} ?`)) {
+                exceptions[todayStr] = newStatus;
+                localStorage.setItem('gabriel_exceptions', JSON.stringify(exceptions));
+                refreshAll();
+            }
+        }
+
+        // --- ONGLET: CALENDRIER MENSUEL ---
+        let calDate = new Date();
+        calDate.setDate(1);
+
+        function changeMonth(delta) {
+            calDate.setMonth(calDate.getMonth() + delta);
+            renderCalendar();
+        }
+
+        function goToToday() {
+            calDate = new Date();
+            calDate.setDate(1);
+            renderCalendar();
+        }
+
+        function renderCalendar() {
+            const monthYear = calDate.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+            document.getElementById('calendar-month-year').innerText = monthYear.charAt(0).toUpperCase() + monthYear.slice(1);
+
+            const grid = document.getElementById('calendar-days');
+            grid.innerHTML = `<div class="day-name">Lun</div><div class="day-name">Mar</div><div class="day-name">Mer</div><div class="day-name">Jeu</div><div class="day-name">Ven</div><div class="day-name">Sam</div><div class="day-name">Dim</div>`;
+
+            const year = calDate.getFullYear();
+            const month = calDate.getMonth();
+            const firstDay = new Date(year, month, 1);
+            const lastDay = new Date(year, month + 1, 0);
+            let startDay = firstDay.getDay() || 7;
+            
+            for(let i=1; i<startDay; i++) grid.innerHTML += `<div class="day empty"></div>`;
+
+            const todayStr = getStr(new Date());
+            for(let d=1; d<=lastDay.getDate(); d++) {
+                let date = new Date(year, month, d, 12, 0, 0);
+                let dateStr = getStr(date);
+                let custody = getCustody(date);
+                
+                let classes = `day ${custody.status.toLowerCase()}`;
+                if(dateStr === todayStr) classes += ' today';
+                if(custody.forced) classes += ' exception';
+
+                grid.innerHTML += `<div class="${classes}" onclick="toggleDay('${dateStr}')">${d}</div>`;
+            }
+        }
+
+        function toggleDay(dateStr) {
+            const parts = dateStr.split('-');
+            const date = new Date(parts[0], parts[1]-1, parts[2], 12, 0, 0);
+            const newStatus = getCustody(date).status === "Papa" ? "Maman" : "Papa";
+            
+            if(confirm(`Inverser exceptionnellement la garde pour le ${dateStr} ?`)) {
+                exceptions[dateStr] = newStatus;
+                localStorage.setItem('gabriel_exceptions', JSON.stringify(exceptions));
+                refreshAll();
+            }
+        }
+
+        // --- ONGLET: ANNÉE ---
+        let yearViewDate = new Date().getFullYear();
+
+        function changeYearView(delta) {
+            yearViewDate += delta;
+            renderYearView();
+        }
+
+        function goToCurrentYear() {
+            yearViewDate = new Date().getFullYear();
+            renderYearView();
+        }
+
+        function renderYearView() {
+            document.getElementById('year-view-title').innerText = yearViewDate;
+            const container = document.getElementById('year-grid-container');
+            container.innerHTML = "";
+
+            const monthNames = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
+            const todayStr = getStr(new Date());
+
+            for (let m = 0; m < 12; m++) {
+                let monthHtml = `<div class="mini-month">
+                                    <div class="mini-month-title">${monthNames[m]}</div>
+                                    <div class="mini-calendar-grid">
+                                        <div class="mini-day-name">L</div><div class="mini-day-name">M</div><div class="mini-day-name">M</div><div class="mini-day-name">J</div><div class="mini-day-name">V</div><div class="mini-day-name">S</div><div class="mini-day-name">D</div>`;
+                
+                const firstDay = new Date(yearViewDate, m, 1);
+                const lastDay = new Date(yearViewDate, m + 1, 0);
+                let startDay = firstDay.getDay() || 7;
+
+                for (let i = 1; i < startDay; i++) monthHtml += `<div></div>`;
+
+                for (let d = 1; d <= lastDay.getDate(); d++) {
+                    let date = new Date(yearViewDate, m, d, 12, 0, 0);
+                    let dateStr = getStr(date);
+                    let custody = getCustody(date);
+
+                    let classes = `mini-day ${custody.status.toLowerCase()}`;
+                    if(dateStr === todayStr) classes += ' today';
+                    if(custody.forced) classes += ' exception';
+
+                    monthHtml += `<div class="${classes}">${d}</div>`;
+                }
+
+                monthHtml += `</div></div>`;
+                container.innerHTML += monthHtml;
+            }
+        }
+
+        // --- ONGLET: STATISTIQUES ---
+        function switchStatTab(tabId) {
+            document.getElementById('stat-tab-months').classList.toggle('active', tabId === 'months');
+            document.getElementById('stat-tab-years').classList.toggle('active', tabId === 'years');
+            
+            document.getElementById('stats-months-view').style.display = tabId === 'months' ? 'block' : 'none';
+            document.getElementById('stats-years-view').style.display = tabId === 'years' ? 'block' : 'none';
+        }
+
+        function computeStats() {
+            const currentYear = new Date().getFullYear();
+            const yearsToCompute = [currentYear, currentYear + 1];
+            
+            const stats = { months: {}, years: {} };
+
+            yearsToCompute.forEach(year => {
+                stats.years[year] = { papa: 0, maman: 0, total: 0 };
+                for(let m=0; m<12; m++) {
+                    const monthKey = `${year}-${String(m+1).padStart(2, '0')}`;
+                    stats.months[monthKey] = { papa: 0, maman: 0, total: 0, date: new Date(year, m, 1) };
+                    
+                    const daysInMonth = new Date(year, m+1, 0).getDate();
+                    for(let d=1; d<=daysInMonth; d++) {
+                        const date = new Date(year, m, d, 12, 0, 0);
+                        const c = getCustody(date);
+                        
+                        stats.years[year].total++;
+                        stats.months[monthKey].total++;
+
+                        if(c.status === "Papa") {
+                            stats.years[year].papa++;
+                            stats.months[monthKey].papa++;
+                        } else {
+                            stats.years[year].maman++;
+                            stats.months[monthKey].maman++;
+                        }
+                    }
+                }
+            });
+            return stats;
+        }
+
+        function renderStats() {
+            const stats = computeStats();
+            
+            // Render: Mois par mois
+            const monthsContainer = document.getElementById('stats-months-list');
+            monthsContainer.innerHTML = '';
+            Object.keys(stats.months).sort().forEach(key => {
+                const data = stats.months[key];
+                const monthName = data.date.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+                const capMonth = monthName.charAt(0).toUpperCase() + monthName.slice(1);
+                
+                const pctPapa = Math.round((data.papa / data.total) * 100) || 0;
+                const pctMaman = Math.round((data.maman / data.total) * 100) || 0;
+
+                monthsContainer.innerHTML += `
+                    <div class="ios-list-row">
+                        <span class="row-title" style="font-size: 15px;">${capMonth}</span>
+                        <div style="font-size: 14px;">
+                            <span class="tag-papa">${data.papa}j <span class="pct">(${pctPapa}%)</span></span>
+                            <span style="color:var(--text-muted); margin:0 4px;">/</span>
+                            <span class="tag-maman">${data.maman}j <span class="pct">(${pctMaman}%)</span></span>
+                        </div>
+                    </div>
+                `;
+            });
+
+            // Render: Années civiles
+            const yearsContainer = document.getElementById('stats-years-list');
+            yearsContainer.innerHTML = '';
+            Object.keys(stats.years).sort().forEach(year => {
+                const data = stats.years[year];
+                
+                const pctPapa = Math.round((data.papa / data.total) * 100) || 0;
+                const pctMaman = Math.round((data.maman / data.total) * 100) || 0;
+
+                yearsContainer.innerHTML += `
+                    <div class="ios-list-row" style="padding: 18px 16px;">
+                        <span class="row-title" style="font-size: 18px;">Année ${year}</span>
+                        <div style="text-align: right; font-size: 15px;">
+                            <div style="margin-bottom: 5px;">
+                                <span class="tag-papa">Papa : ${data.papa} j <span class="pct">(${pctPapa}%)</span></span>
+                            </div>
+                            <div>
+                                <span class="tag-maman">Maman : ${data.maman} j <span class="pct">(${pctMaman}%)</span></span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        // --- NAVIGATION PRINCIPALE ---
+        function switchTab(tabId, el) {
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.getElementById('view-' + tabId).classList.add('active');
+            document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+            el.classList.add('active');
+        }
+
+        // --- EXPORT ICS ---
+        function exportICS() {
+            let ics = "BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//Garde Gabriel//FR\n";
+            const start = new Date();
+            for(let i=0; i<365; i++) {
+                let d = new Date(start);
+                d.setDate(start.getDate() + i);
+                let c = getCustody(d);
+                let dStr = getStr(d).replace(/-/g, '');
+                ics += `BEGIN:VEVENT\nDTSTART;VALUE=DATE:${dStr}\nDTEND;VALUE=DATE:${dStr}\nSUMMARY:Garde ${c.status}\nDESCRIPTION:${c.reason}\nEND:VEVENT\n`;
+            }
+            ics += "END:VCALENDAR";
+
+            const blob = new Blob([ics], { type: 'text/calendar' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'garde_gabriel.ics';
+            a.click();
+        }
+
+        function refreshAll() {
+            renderToday();
+            renderCalendar();
+            renderYearView();
+            renderStats();
+        }
+
+        // INITIALISATION
+        refreshAll();
+
+    </script>
+</body>
+</html>
