@@ -1,322 +1,540 @@
-<!DOCTYPE html>  
-<html lang="fr">  
-<head>  
-    <meta charset="UTF-8">  
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">  
-    <title>Garde Gabriel</title>  
-    <meta name="apple-mobile-web-app-capable" content="yes">  
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">  
-    <style>  
-        :root {  
-            --app-bg:#f2f2f7;--text:#000;--muted:#8e8e93;--card:#fff;  
-            --tab-bg:rgba(255,255,255,.85);--border:rgba(60,60,67,.29);  
-            --papa:#007AFF;--maman:#FF3B30;--papa-bg:rgba(0,122,255,.12);--maman-bg:rgba(255,59,48,.12);  
-            --religious:#AF52DE;--ferie:#34C759;--exception:#FF9500;  
-            --seg:rgba(118,118,128,.12);--seg-on:#fff;--safe:env(safe-area-inset-bottom,20px);  
-        }  
-        @media(prefers-color-scheme:dark){:root{  
-            --app-bg:#000;--text:#fff;--muted:rgba(235,235,245,.6);--card:#1c1c1e;  
-            --tab-bg:rgba(28,28,30,.85);--border:rgba(84,84,88,.65);  
-            --papa-bg:rgba(10,132,255,.25);--maman-bg:rgba(255,69,58,.25);  
-            --religious:#BF5AF2;--ferie:#30D158;--seg:rgba(118,118,128,.24);--seg-on:#636366;  
-        }}  
-        *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display",sans-serif}  
-        body{margin:0;background:#e5e5ea;display:flex;justify-content:center}  
-        .app{width:100%;max-width:450px;background:var(--app-bg);color:var(--text);min-height:100vh;overflow-x:hidden;padding-bottom:calc(75px + var(--safe))}  
-        .tabbar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:450px;height:calc(55px + var(--safe));background:var(--tab-bg);backdrop-filter:blur(25px);-webkit-backdrop-filter:blur(25px);border-top:.5px solid var(--border);display:flex;padding-bottom:var(--safe);z-index:999}  
-        .tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--muted);font-size:10px;font-weight:500;cursor:pointer}  
-        .tab.on{color:var(--papa)} .tab-icon{font-size:22px;margin-bottom:2px}  
-        .view{display:none;padding:20px;padding-top:max(30px,env(safe-area-inset-top));animation:fu .25s ease}  
-        .view.on{display:block}  
-        @keyframes fu{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}  
-        h1{font-size:32px;font-weight:700;letter-spacing:-.5px;margin:0 0 18px}  
-        h2{font-size:20px;font-weight:600;margin:0 0 12px}  
-        .card{background:var(--card);border-radius:12px;margin-bottom:18px;overflow:hidden}  
-        .row{display:flex;justify-content:space-between;align-items:center;padding:13px 16px;border-bottom:.5px solid var(--border);font-size:15px}  
-        .row:last-child{border-bottom:none}  
-        .rl{display:flex;flex-direction:column;gap:3px} .rt{font-weight:500} .rs{font-size:12px;color:var(--muted)}  
-        .tp{color:var(--papa);font-weight:700} .tm{color:var(--maman);font-weight:700}  
-        .seg-ctrl{display:flex;background:var(--seg);border-radius:9px;padding:2px;margin-bottom:18px}  
-        .seg-btn{flex:1;text-align:center;padding:6px 0;font-size:13px;font-weight:600;border-radius:7px;cursor:pointer;color:var(--text)}  
-        .seg-btn.on{background:var(--seg-on);box-shadow:0 2px 6px rgba(0,0,0,.12)}  
-        .hero{text-align:center;padding:22px 10px}  
-        .circle{width:150px;height:150px;border-radius:75px;margin:0 auto 16px;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:700;border:4px solid;transition:.2s}  
-        .circle.papa{background:var(--papa-bg);color:var(--papa);border-color:var(--papa)}  
-        .circle.maman{background:var(--maman-bg);color:var(--maman);border-color:var(--maman)}  
-        .hero-date{font-size:16px;color:var(--muted);margin-bottom:20px}  
-        .hero-reason{font-size:13px;color:var(--muted);margin-top:8px;padding:0 20px;line-height:1.5}  
-        .version-tag{text-align:center;font-size:10px;color:var(--muted);margin-top:4px;opacity:.7}  
-        .btn{border:none;border-radius:12px;padding:14px;font-size:16px;font-weight:600;width:100%;cursor:pointer;margin-top:8px;display:block;text-align:center}  
-        .btn-solid{background:var(--papa);color:#fff} .btn-outline{background:transparent;color:var(--papa);border:1.5px solid var(--papa)}  
-        .btn:active{opacity:.75} .btn-row{display:flex;gap:10px;margin-top:10px} .btn-row .btn{flex:1;margin-top:0}  
-        .cal-nav{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}  
-        .nav-btn{background:var(--seg);border:none;border-radius:50%;width:32px;height:32px;color:var(--text);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center}  
-        .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;text-align:center}  
-        .dname{font-size:11px;font-weight:500;color:var(--muted);margin-bottom:5px}  
-        .day{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:500;border-radius:50%;cursor:pointer;position:relative}  
-        .day.empty{visibility:hidden}  
-        .day.papa{background:var(--papa-bg);color:var(--papa)} .day.maman{background:var(--maman-bg);color:var(--maman)}  
-        .day.today{outline:2.5px solid var(--text);outline-offset:-1px;font-weight:700}  
-        .day.exc::after{content:'';position:absolute;bottom:2px;width:4px;height:4px;background:var(--exception);border-radius:50%}  
-        .day.rel{box-shadow:inset 0 0 0 2px var(--religious)}  
-        .day.fer{box-shadow:inset 0 0 0 2px var(--ferie)}  
-        .yr-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px}  
-        .mm{background:var(--card);border-radius:12px;padding:10px}  
-        .mm-title{font-size:12px;font-weight:600;text-align:center;margin-bottom:7px}  
-        .mm-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center}  
-        .mdn{font-size:8px;color:var(--muted);margin-bottom:2px}  
-        .md{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:9px;border-radius:50%;position:relative}  
-        .md.papa{background:var(--papa-bg);color:var(--papa)} .md.maman{background:var(--maman-bg);color:var(--maman)}  
-        .md.today{outline:1.5px solid var(--text);outline-offset:-1px;font-weight:700}  
-        .md.exc::after{content:'';position:absolute;bottom:1px;width:3px;height:3px;background:var(--exception);border-radius:50%}  
-        .md.rel{box-shadow:inset 0 0 0 1.5px var(--religious)}  
-        .md.fer{box-shadow:inset 0 0 0 1.5px var(--ferie)}  
-        .legend{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;font-size:11px;color:var(--muted);margin:14px 0 6px}  
-        .leg{display:flex;align-items:center;gap:4px} .ldot{width:10px;height:10px;border-radius:50%}  
-        .dist-bar{display:flex;height:12px;border-radius:6px;overflow:hidden;background:var(--seg);margin:12px 0 8px}  
-        .dp{background:var(--papa)} .dm{background:var(--maman)}  
-        .dist-lbl{display:flex;justify-content:space-between;font-size:13px;font-weight:600}  
-        .sync-info{text-align:center;font-size:11px;color:var(--muted);margin-top:16px}  
-        @media print{  
-            .tabbar,.btn,.seg-ctrl,.cal-nav,h1,.sync-info,.version-tag{display:none!important}  
-            body,.app{background:white!important;box-shadow:none!important;padding:0!important}  
-            .view{display:none!important;padding:0!important} .view.on{display:block!important}  
-            .card{border:1px solid #ccc;box-shadow:none;break-inside:avoid}  
-        }  
-    </style>  
-</head>  
-<body>  
-<div class="app">  
-    <div id="v-today" class="view on">  
-        <h1>Aujourd'hui</h1>  
-        <div class="version-tag">v10 — Publié le 09/07/2025 à 02:30</div>  
-        <div class="hero">  
-            <div class="hero-date" id="t-date"></div>  
-            <div class="circle" id="t-circle"></div>  
-            <div class="hero-reason" id="t-reason"></div>  
-        </div>  
-        <button class="btn btn-outline" onclick="forceToday()">Forcer un changement exceptionnel</button>  
-        <h2 style="margin-top:22px">À venir</h2>  
-        <div class="card" id="upcoming"></div>  
-    </div>  
-    <div id="v-calendar" class="view">  
-        <h1>Mois</h1>  
-        <div class="card" style="padding:14px 10px">  
-            <div class="cal-nav">  
-                <button class="nav-btn" onclick="chMonth(-1)">❮</button>  
-                <h2 style="margin:0;font-size:17px" id="cal-title"></h2>  
-                <button class="nav-btn" onclick="chMonth(1)">❯</button>  
-            </div>  
-            <div class="cal-grid" id="cal-grid"></div>  
-        </div>  
-        <div class="btn-row">  
-            <button class="btn btn-outline" onclick="goToday()">Ce mois-ci</button>  
-            <button class="btn btn-outline" onclick="window.print()">Imprimer</button>  
-        </div>  
-        <div class="legend">  
-            <span class="leg"><span class="ldot" style="background:var(--papa)"></span>Papa</span>  
-            <span class="leg"><span class="ldot" style="background:var(--maman)"></span>Maman</span>  
-            <span class="leg"><span class="ldot" style="background:var(--exception)"></span>Modifié</span>  
-            <span class="leg"><span class="ldot" style="border:2px solid var(--religious);background:transparent"></span>Fête juive</span>  
-            <span class="leg"><span class="ldot" style="border:2px solid var(--ferie);background:transparent"></span>Férié étendu</span>  
-        </div>  
-    </div>  
-    <div id="v-year" class="view">  
-        <h1>Année</h1>  
-        <div class="card" style="padding:13px 14px">  
-            <div class="cal-nav" style="margin-bottom:0">  
-                <button class="nav-btn" onclick="chYear(-1)">❮</button>  
-                <h2 style="margin:0;font-size:19px" id="yr-title"></h2>  
-                <button class="nav-btn" onclick="chYear(1)">❯</button>  
-            </div>  
-        </div>  
-        <div class="yr-grid" id="yr-grid"></div>  
-        <div class="legend">  
-            <span class="leg"><span class="ldot" style="background:var(--papa)"></span>Papa</span>  
-            <span class="leg"><span class="ldot" style="background:var(--maman)"></span>Maman</span>  
-            <span class="leg"><span class="ldot" style="background:var(--exception)"></span>Modifié</span>  
-            <span class="leg"><span class="ldot" style="border:2px solid var(--religious);background:transparent"></span>Fête juive</span>  
-        </div>  
-        <button class="btn btn-outline" style="margin-top:8px" onclick="goYear()">Année en cours</button>  
-    </div>  
-    <div id="v-stats" class="view">  
-        <h1>Statistiques</h1>  
-        <div class="seg-ctrl">  
-            <div class="seg-btn on" id="sb-m" onclick="stTab('m')">Mois</div>  
-            <div class="seg-btn" id="sb-y" onclick="stTab('y')">Années</div>  
-            <div class="seg-btn" id="sb-g" onclick="stTab('g')">Bilan</div>  
-        </div>  
-        <div id="sv-m"><div class="card" id="sl-m"></div></div>  
-        <div id="sv-y" style="display:none"><div class="card" id="sl-y"></div></div>  
-        <div id="sv-g" style="display:none"><div id="sl-g"></div></div>  
-        <button class="btn btn-solid" style="margin-top:16px" onclick="exportICS()">Exporter iCal (.ics)</button>  
-        <div class="sync-info">Données : <span id="sync-lbl">Initialisation…</span></div>  
-    </div>  
-    <div class="tabbar">  
-        <div class="tab on" onclick="sw('today',this)"><span class="tab-icon">🏠</span>Aujourd'hui</div>  
-        <div class="tab" onclick="sw('calendar',this)"><span class="tab-icon">📅</span>Mois</div>  
-        <div class="tab" onclick="sw('year',this)"><span class="tab-icon">🗓️</span>Année</div>  
-        <div class="tab" onclick="sw('stats',this)"><span class="tab-icon">📊</span>Stats</div>  
-    </div>  
-</div>  
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Garde Gabriel</title>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <style>
+        :root {
+            --app-bg:#f2f2f7; --text:#000; --muted:#8e8e93; --card:#fff;
+            --tab-bg:rgba(255,255,255,.85); --border:rgba(60,60,67,.29);
+            --papa:#007AFF; --maman:#FF3B30; --papa-bg:rgba(0,122,255,.12); --maman-bg:rgba(255,59,48,.12);
+            --religious:#AF52DE; --ferie:#34C759; --exception:#FF9500;
+            --seg:rgba(118,118,128,.12); --seg-on:#fff; --safe:env(safe-area-inset-bottom,20px);
+        }
+        @media(prefers-color-scheme:dark){:root{
+            --app-bg:#000; --text:#fff; --muted:rgba(235,235,245,.6); --card:#1c1c1e;
+            --tab-bg:rgba(28,28,30,.85); --border:rgba(84,84,88,.65);
+            --papa-bg:rgba(10,132,255,.25); --maman-bg:rgba(255,69,58,.25);
+            --religious:#BF5AF2; --ferie:#30D158; --seg:rgba(118,118,128,.24); --seg-on:#636366;
+        }}
+        *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display",sans-serif}
+        body{margin:0;background:#e5e5ea;display:flex;justify-content:center}
+        .app{width:100%;max-width:450px;background:var(--app-bg);color:var(--text);min-height:100vh;overflow-x:hidden;padding-bottom:calc(75px + var(--safe))}
+        .tabbar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:450px;height:calc(55px + var(--safe));background:var(--tab-bg);backdrop-filter:blur(25px);-webkit-backdrop-filter:blur(25px);border-top:.5px solid var(--border);display:flex;padding-bottom:var(--safe);z-index:999}
+        .tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--muted);font-size:10px;font-weight:500;cursor:pointer}
+        .tab.on{color:var(--papa)} .tab-icon{font-size:22px;margin-bottom:2px}
+        .view{display:none;padding:20px;padding-top:max(30px,env(safe-area-inset-top));animation:fu .25s ease}
+        .view.on{display:block}
+        @keyframes fu{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+        h1{font-size:32px;font-weight:700;letter-spacing:-.5px;margin:0 0 18px}
+        h2{font-size:20px;font-weight:600;margin:0 0 12px}
+        .card{background:var(--card);border-radius:12px;margin-bottom:18px;overflow:hidden}
+        .row{display:flex;justify-content:space-between;align-items:center;padding:13px 16px;border-bottom:.5px solid var(--border);font-size:15px}
+        .row:last-child{border-bottom:none}
+        .rl{display:flex;flex-direction:column;gap:3px} .rt{font-weight:500} .rs{font-size:12px;color:var(--muted)}
+        .tp{color:var(--papa);font-weight:700} .tm{color:var(--maman);font-weight:700}
+        .seg-ctrl{display:flex;background:var(--seg);border-radius:9px;padding:2px;margin-bottom:18px}
+        .seg-btn{flex:1;text-align:center;padding:6px 0;font-size:13px;font-weight:600;border-radius:7px;cursor:pointer;color:var(--text)}
+        .seg-btn.on{background:var(--seg-on);box-shadow:0 2px 6px rgba(0,0,0,.12)}
+        .hero{text-align:center;padding:22px 10px}
+        .circle{width:150px;height:150px;border-radius:75px;margin:0 auto 16px;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:700;border:4px solid;transition:.2s}
+        .circle.papa{background:var(--papa-bg);color:var(--papa);border-color:var(--papa)}
+        .circle.maman{background:var(--maman-bg);color:var(--maman);border-color:var(--maman)}
+        .hero-date{font-size:16px;color:var(--muted);margin-bottom:20px}
+        .hero-reason{font-size:13px;color:var(--muted);margin-top:8px;padding:0 20px;line-height:1.5}
+        .btn{border:none;border-radius:12px;padding:14px;font-size:16px;font-weight:600;width:100%;cursor:pointer;margin-top:8px;display:block;text-align:center}
+        .btn-solid{background:var(--papa);color:#fff} .btn-outline{background:transparent;color:var(--papa);border:1.5px solid var(--papa)}
+        .btn:active{opacity:.75} .btn-row{display:flex;gap:10px;margin-top:10px} .btn-row .btn{flex:1;margin-top:0}
+        .cal-nav{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+        .nav-btn{background:var(--seg);border:none;border-radius:50%;width:32px;height:32px;color:var(--text);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+        .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;text-align:center}
+        .dname{font-size:11px;font-weight:500;color:var(--muted);margin-bottom:5px}
+        .day{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:500;border-radius:50%;cursor:pointer;position:relative}
+        .day.empty{visibility:hidden}
+        .day.papa{background:var(--papa-bg);color:var(--papa)} .day.maman{background:var(--maman-bg);color:var(--maman)}
+        .day.today{outline:2.5px solid var(--text);outline-offset:-1px;font-weight:700}
+        .day.exc::after{content:'';position:absolute;bottom:2px;width:4px;height:4px;background:var(--exception);border-radius:50%}
+        .day.rel{box-shadow:inset 0 0 0 2px var(--religious)}
+        .day.fer{box-shadow:inset 0 0 0 2px var(--ferie)}
+        .yr-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+        .mm{background:var(--card);border-radius:12px;padding:10px}
+        .mm-title{font-size:12px;font-weight:600;text-align:center;margin-bottom:7px}
+        .mm-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center}
+        .mdn{font-size:8px;color:var(--muted);margin-bottom:2px}
+        .md{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:9px;border-radius:50%;position:relative}
+        .md.papa{background:var(--papa-bg);color:var(--papa)} .md.maman{background:var(--maman-bg);color:var(--maman)}
+        .md.today{outline:1.5px solid var(--text);outline-offset:-1px;font-weight:700}
+        .md.exc::after{content:'';position:absolute;bottom:1px;width:3px;height:3px;background:var(--exception);border-radius:50%}
+        .md.rel{box-shadow:inset 0 0 0 1.5px var(--religious)}
+        .md.fer{box-shadow:inset 0 0 0 1.5px var(--ferie)}
+        .legend{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;font-size:11px;color:var(--muted);margin:14px 0 6px}
+        .leg{display:flex;align-items:center;gap:4px} .ldot{width:10px;height:10px;border-radius:50%}
+        .dist-bar{display:flex;height:12px;border-radius:6px;overflow:hidden;background:var(--seg);margin:12px 0 8px}
+        .dp{background:var(--papa)} .dm{background:var(--maman)}
+        .dist-lbl{display:flex;justify-content:space-between;font-size:13px;font-weight:600}
+        .sync-info{text-align:center;font-size:11px;color:var(--muted);margin-top:16px}
+        @media print {
+            .tabbar,.btn,.seg-ctrl,.cal-nav,h1,.sync-info{display:none!important}
+            body,.app{background:white!important;box-shadow:none!important;padding:0!important}
+            .view{display:none!important;padding:0!important} .view.on{display:block!important}
+            .card{border:1px solid #ccc;box-shadow:none;break-inside:avoid}
+        }
+    </style>
+</head>
+<body>
+<div class="app">
+    <div id="v-today" class="view on">
+        <h1>Aujourd'hui</h1>
+        <div class="hero">
+            <div class="hero-date" id="t-date"></div>
+            <div class="circle" id="t-circle"></div>
+            <div class="hero-reason" id="t-reason"></div>
+        </div>
+        <button class="btn btn-outline" onclick="forceToday()">Forcer un changement exceptionnel</button>
+        <h2 style="margin-top:22px">À venir</h2>
+        <div class="card" id="upcoming"></div>
+    </div>
+    <div id="v-calendar" class="view">
+        <h1>Mois</h1>
+        <div class="card" style="padding:14px 10px">
+            <div class="cal-nav">
+                <button class="nav-btn" onclick="chMonth(-1)">❮</button>
+                <h2 style="margin:0;font-size:17px" id="cal-title"></h2>
+                <button class="nav-btn" onclick="chMonth(1)">❯</button>
+            </div>
+            <div class="cal-grid" id="cal-grid"></div>
+        </div>
+        <div class="btn-row">
+            <button class="btn btn-outline" onclick="goToday()">Ce mois-ci</button>
+            <button class="btn btn-outline" onclick="window.print()">Imprimer</button>
+        </div>
+        <div class="legend">
+            <span class="leg"><span class="ldot" style="background:var(--papa)"></span>Papa</span>
+            <span class="leg"><span class="ldot" style="background:var(--maman)"></span>Maman</span>
+            <span class="leg"><span class="ldot" style="background:var(--exception)"></span>Modifié</span>
+            <span class="leg"><span class="ldot" style="border:2px solid var(--religious);background:transparent"></span>Fête juive</span>
+            <span class="leg"><span class="ldot" style="border:2px solid var(--ferie);background:transparent"></span>Férié étendu</span>
+        </div>
+    </div>
+    <div id="v-year" class="view">
+        <h1>Année</h1>
+        <div class="card" style="padding:13px 14px">
+            <div class="cal-nav" style="margin-bottom:0">
+                <button class="nav-btn" onclick="chYear(-1)">❮</button>
+                <h2 style="margin:0;font-size:19px" id="yr-title"></h2>
+                <button class="nav-btn" onclick="chYear(1)">❯</button>
+            </div>
+        </div>
+        <div class="yr-grid" id="yr-grid"></div>
+        <div class="legend">
+            <span class="leg"><span class="ldot" style="background:var(--papa)"></span>Papa</span>
+            <span class="leg"><span class="ldot" style="background:var(--maman)"></span>Maman</span>
+            <span class="leg"><span class="ldot" style="background:var(--exception)"></span>Modifié</span>
+            <span class="leg"><span class="ldot" style="border:2px solid var(--religious);background:transparent"></span>Fête juive</span>
+        </div>
+        <button class="btn btn-outline" style="margin-top:8px" onclick="goYear()">Année en cours</button>
+    </div>
+    <div id="v-stats" class="view">
+        <h1>Statistiques</h1>
+        <div class="seg-ctrl">
+            <div class="seg-btn on" id="sb-m" onclick="stTab('m')">Mois</div>
+            <div class="seg-btn" id="sb-y" onclick="stTab('y')">Années</div>
+            <div class="seg-btn" id="sb-g" onclick="stTab('g')">Bilan</div>
+        </div>
+        <div id="sv-m"><div class="card" id="sl-m"></div></div>
+        <div id="sv-y" style="display:none"><div class="card" id="sl-y"></div></div>
+        <div id="sv-g" style="display:none"><div id="sl-g"></div></div>
+        <button class="btn btn-solid" style="margin-top:16px" onclick="exportICS()">Exporter iCal (.ics)</button>
+        <div class="sync-info">Données : <span id="sync-lbl">Initialisation…</span></div>
+    </div>
+    <div class="tabbar">
+        <div class="tab on" onclick="sw('today',this)"><span class="tab-icon">🏠</span>Aujourd'hui</div>
+        <div class="tab" onclick="sw('calendar',this)"><span class="tab-icon">📅</span>Mois</div>
+        <div class="tab" onclick="sw('year',this)"><span class="tab-icon">🗓️</span>Année</div>
+        <div class="tab" onclick="sw('stats',this)"><span class="tab-icon">📊</span>Stats</div>
+    </div>
+</div>
 
-<script>  
-/* ═══════════════════════════════════════════════════════  
-   GARDE GABRIEL — v10 — 09/07/2025 02:30  
-   ═══════════════════════════════════════════════════════  
-   JUGEMENT DU 06/02/2026 — PAGES 7-8  
-   
-   HIÉRARCHIE STRICTE :  
-   1. Exception manuelle  
-   2. Fête des Mères / Pères  
-   3. Vacances scolaires (PRIMAUTÉ ABSOLUE)  
-   4. Fêtes juives ALTERNÉES (paire=Papa, impaire=Maman)  
-      SAUF si pendant vacances → absorbées par vacances  
-   5. Jours fériés attenants (extension du bloc Papa)  
-   6. Roulement :  
-      S. PAIRES  → Ven+Sam+Dim+Lun = Papa  
-      S. IMPAIRES → Mer+Jeu = Papa  
-      Reste = Maman  
-   ═══════════════════════════════════════════════════════ */  
+<script>
+/* ═══════════════════════════════════════════════════════
+   GARDE GABRIEL — v9 — AUDIT COMPLET DU JUGEMENT 06/02/2026
+   ═══════════════════════════════════════════════════════
+   HIÉRARCHIE :
+   1. Exception manuelle
+   2. Fête des Mères / Pères
+   3. Vacances scolaires (PRIMAUTÉ ABSOLUE)
+   4. Fêtes juives (Papa, sauf si pendant vacances)
+   5. Jours fériés attenants (extension de la période)
+   6. Roulement :
+      - Semaines PAIRES : Ven→Lun = PAPA
+      - Semaines IMPAIRES : Mer→Jeu = PAPA
+      - Reste = MAMAN
+   ═══════════════════════════════════════════════════════ */
 
-const APP_VERSION = "v10";  
-const APP_BUILD = "09/07/2025 02:30";  
+if(localStorage.getItem('app_version')!=='v9'){
+    ['gabriel_school_holidays','gabriel_religious_holidays','gabriel_last_sync'].forEach(k=>localStorage.removeItem(k));
+    localStorage.setItem('app_version','v9');
+}
 
-if(localStorage.getItem('app_version')!==APP_VERSION){  
-    ['gabriel_school_holidays','gabriel_religious_holidays','gabriel_last_sync'].forEach(k=>localStorage.removeItem(k));  
-    localStorage.setItem('app_version',APP_VERSION);  
-}  
+let exceptions=JSON.parse(localStorage.getItem('gabriel_exceptions')||'{}');
+const saveEx=()=>localStorage.setItem('gabriel_exceptions',JSON.stringify(exceptions));
 
-let exceptions=JSON.parse(localStorage.getItem('gabriel_exceptions')||'{}');  
-const saveEx=()=>localStorage.setItem('gabriel_exceptions',JSON.stringify(exceptions));  
+const d2s=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const s2d=s=>{const[y,m,j]=s.split('-').map(Number);return new Date(y,m-1,j,12,0,0)};
 
-const d2s=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;  
-const s2d=s=>{const[y,m,j]=s.split('-').map(Number);return new Date(y,m-1,j,12,0,0)};  
+// Gabriel né le 21/09/2022 → 6 ans révolus le 21/09/2028
+const GABRIEL_6ANS = new Date(2028,8,21,12,0,0);
 
-// Gabriel né le 21/09/2022 → 6 ans révolus le 21/09/2028  
-const GABRIEL_6ANS=new Date(2028,8,21,12,0,0);  
+/* ── VACANCES SCOLAIRES Zone C étendu 2024-2030 ── */
+let schoolHols=JSON.parse(localStorage.getItem('gabriel_school_holidays')||'null')||[
+    {n:"Toussaint",s:"2024-10-19",e:"2024-11-03",mid:"2024-10-26"},
+    {n:"Noël",s:"2024-12-21",e:"2025-01-05",mid:"2024-12-28"},
+    {n:"Hiver",s:"2025-02-15",e:"2025-03-02",mid:"2025-02-22"},
+    {n:"Printemps",s:"2025-04-12",e:"2025-04-27",mid:"2025-04-19"},
+    {n:"Été",s:"2025-07-05",e:"2025-08-31",summer:true},
+    {n:"Toussaint",s:"2025-10-18",e:"2025-11-02",mid:"2025-10-25"},
+    {n:"Noël",s:"2025-12-20",e:"2026-01-04",mid:"2025-12-27"},
+    {n:"Hiver",s:"2026-02-21",e:"2026-03-08",mid:"2026-02-28"},
+    {n:"Printemps",s:"2026-04-18",e:"2026-05-03",mid:"2026-04-25"},
+    {n:"Été",s:"2026-07-04",e:"2026-08-31",summer:true},
+    {n:"Toussaint",s:"2026-10-17",e:"2026-11-01",mid:"2026-10-24"},
+    {n:"Noël",s:"2026-12-19",e:"2027-01-03",mid:"2026-12-26"},
+    {n:"Hiver",s:"2027-02-20",e:"2027-03-07",mid:"2027-02-27"},
+    {n:"Printemps",s:"2027-04-17",e:"2027-05-02",mid:"2027-04-24"},
+    {n:"Été",s:"2027-07-06",e:"2027-08-31",summer:true},
+    {n:"Toussaint",s:"2027-10-23",e:"2027-11-07",mid:"2027-10-30"},
+    {n:"Noël",s:"2027-12-18",e:"2028-01-02",mid:"2027-12-25"},
+    {n:"Hiver",s:"2028-02-19",e:"2028-03-05",mid:"2028-02-26"},
+    {n:"Printemps",s:"2028-04-15",e:"2028-04-30",mid:"2028-04-22"},
+    {n:"Été",s:"2028-07-06",e:"2028-08-31",summer:true},
+    {n:"Toussaint",s:"2028-10-21",e:"2028-11-05",mid:"2028-10-28"},
+    {n:"Noël",s:"2028-12-23",e:"2029-01-07",mid:"2028-12-30"},
+    {n:"Hiver",s:"2029-02-17",e:"2029-03-04",mid:"2029-02-24"},
+    {n:"Printemps",s:"2029-04-14",e:"2029-04-29",mid:"2029-04-21"},
+    {n:"Été",s:"2029-07-06",e:"2029-08-31",summer:true},
+    {n:"Toussaint",s:"2029-10-20",e:"2029-11-04",mid:"2029-10-27"},
+    {n:"Noël",s:"2029-12-22",e:"2030-01-06",mid:"2029-12-29"},
+    {n:"Hiver",s:"2030-02-23",e:"2030-03-10",mid:"2030-03-02"},
+    {n:"Printemps",s:"2030-04-20",e:"2030-05-05",mid:"2030-04-27"},
+    {n:"Été",s:"2030-07-06",e:"2030-08-31",summer:true}
+];
 
-/* ── VACANCES SCOLAIRES Zone C 2024-2030 ── */  
-let schoolHols=JSON.parse(localStorage.getItem('gabriel_school_holidays')||'null')||[  
-    {n:"Toussaint",s:"2024-10-19",e:"2024-11-03",mid:"2024-10-26"},  
-    {n:"Noël",s:"2024-12-21",e:"2025-01-05",mid:"2024-12-28"},  
-    {n:"Hiver",s:"2025-02-15",e:"2025-03-02",mid:"2025-02-22"},  
-    {n:"Printemps",s:"2025-04-12",e:"2025-04-27",mid:"2025-04-19"},  
-    {n:"Été",s:"2025-07-05",e:"2025-08-31",summer:true},  
-    {n:"Toussaint",s:"2025-10-18",e:"2025-11-02",mid:"2025-10-25"},  
-    {n:"Noël",s:"2025-12-20",e:"2026-01-04",mid:"2025-12-27"},  
-    {n:"Hiver",s:"2026-02-21",e:"2026-03-08",mid:"2026-02-28"},  
-    {n:"Printemps",s:"2026-04-18",e:"2026-05-03",mid:"2026-04-25"},  
-    {n:"Été",s:"2026-07-04",e:"2026-08-31",summer:true},  
-    {n:"Toussaint",s:"2026-10-17",e:"2026-11-01",mid:"2026-10-24"},  
-    {n:"Noël",s:"2026-12-19",e:"2027-01-03",mid:"2026-12-26"},  
-    {n:"Hiver",s:"2027-02-20",e:"2027-03-07",mid:"2027-02-27"},  
-    {n:"Printemps",s:"2027-04-17",e:"2027-05-02",mid:"2027-04-24"},  
-    {n:"Été",s:"2027-07-06",e:"2027-08-31",summer:true},  
-    {n:"Toussaint",s:"2027-10-23",e:"2027-11-07",mid:"2027-10-30"},  
-    {n:"Noël",s:"2027-12-18",e:"2028-01-02",mid:"2027-12-25"},  
-    {n:"Hiver",s:"2028-02-19",e:"2028-03-05",mid:"2028-02-26"},  
-    {n:"Printemps",s:"2028-04-15",e:"2028-04-30",mid:"2028-04-22"},  
-    {n:"Été",s:"2028-07-06",e:"2028-08-31",summer:true},  
-    {n:"Toussaint",s:"2028-10-21",e:"2028-11-05",mid:"2028-10-28"},  
-    {n:"Noël",s:"2028-12-23",e:"2029-01-07",mid:"2028-12-30"},  
-    {n:"Hiver",s:"2029-02-17",e:"2029-03-04",mid:"2029-02-24"},  
-    {n:"Printemps",s:"2029-04-14",e:"2029-04-29",mid:"2029-04-21"},  
-    {n:"Été",s:"2029-07-06",e:"2029-08-31",summer:true},  
-    {n:"Toussaint",s:"2029-10-20",e:"2029-11-04",mid:"2029-10-27"},  
-    {n:"Noël",s:"2029-12-22",e:"2030-01-06",mid:"2029-12-29"},  
-    {n:"Hiver",s:"2030-02-23",e:"2030-03-10",mid:"2030-03-02"},  
-    {n:"Printemps",s:"2030-04-20",e:"2030-05-05",mid:"2030-04-27"},  
-    {n:"Été",s:"2030-07-06",e:"2030-08-31",summer:true}  
-];  
+/* ── FÊTES JUIVES (base, enrichie via HebCal) ── */
+let relHols=JSON.parse(localStorage.getItem('gabriel_religious_holidays')||'null')||{
+    "2024-10-03":"Roch Hachana","2024-10-04":"Roch Hachana (J2)","2024-10-12":"Kippour",
+    "2024-12-26":"Hanouka (1er jour)","2025-01-02":"Hanouka (Dernier jour)",
+    "2025-03-14":"Pourim","2025-04-13":"Pessah (J1)","2025-04-14":"Pessah (J2)",
+    "2025-09-23":"Roch Hachana","2025-09-24":"Roch Hachana (J2)","2025-10-02":"Kippour",
+    "2025-12-15":"Hanouka (1er jour)","2025-12-22":"Hanouka (Dernier jour)",
+    "2026-03-03":"Pourim","2026-04-02":"Pessah (J1)","2026-04-03":"Pessah (J2)"
+};
 
-/* ── FÊTES JUIVES (base, enrichie via HebCal) ── */  
-let relHols=JSON.parse(localStorage.getItem('gabriel_religious_holidays')||'null')||{  
-    "2024-10-03":"Roch Hachana","2024-10-04":"Roch Hachana (J2)","2024-10-12":"Kippour",  
-    "2024-12-26":"Hanouka (1er jour)","2025-01-02":"Hanouka (Dernier jour)",  
-    "2025-03-14":"Pourim","2025-04-13":"Pessah (J1)","2025-04-14":"Pessah (J2)",  
-    "2025-09-23":"Roch Hachana","2025-09-24":"Roch Hachana (J2)","2025-10-02":"Kippour",  
-    "2025-12-15":"Hanouka (1er jour)","2025-12-22":"Hanouka (Dernier jour)",  
-    "2026-03-03":"Pourim","2026-04-02":"Pessah (J1)","2026-04-03":"Pessah (J2)",  
-    "2026-09-12":"Roch Hachana","2026-09-13":"Roch Hachana (J2)","2026-09-21":"Kippour",  
-    "2026-12-05":"Hanouka (1er jour)","2026-12-12":"Hanouka (Dernier jour)",  
-    "2027-02-20":"Pourim","2027-03-22":"Pessah (J1)","2027-03-23":"Pessah (J2)",  
-    "2027-10-02":"Roch Hachana","2027-10-03":"Roch Hachana (J2)","2027-10-11":"Kippour",  
-    "2027-12-25":"Hanouka (1er jour)","2028-01-01":"Hanouka (Dernier jour)"  
-};  
+/* ── FÊTE DES MÈRES (dernier dimanche de mai, décalé si Pentecôte) ── */
+function getMothersDay(yr){
+    let fdm=new Date(yr,4,31,12,0,0);
+    while(fdm.getDay()!==0) fdm.setDate(fdm.getDate()-1);
+    const a=yr%19,b=Math.floor(yr/100),c=yr%100,d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451),mo=Math.floor((h+l-7*m+114)/31),da=((h+l-7*m+114)%31)+1;
+    const easter=new Date(yr,mo-1,da,12,0,0);
+    const pentecost=new Date(easter);pentecost.setDate(easter.getDate()+49);
+    if(d2s(fdm)===d2s(pentecost)) fdm.setDate(fdm.getDate()+7);
+    return d2s(fdm);
+}
 
-/* ── FÊTE DES MÈRES (dernier dim. de mai, décalé si Pentecôte) ── */  
-function getMothersDay(yr){  
-    let fdm=new Date(yr,4,31,12,0,0);  
-    while(fdm.getDay()!==0)fdm.setDate(fdm.getDate()-1);  
-    const easter=getEaster(yr);  
-    const pentecost=new Date(easter);pentecost.setDate(easter.getDate()+49);  
-    if(d2s(fdm)===d2s(pentecost))fdm.setDate(fdm.getDate()+7);  
-    return d2s(fdm);  
-}  
+/* ── JOURS FÉRIÉS FRANÇAIS ── */
+function getPH(year){
+    const a=year%19,b=Math.floor(year/100),c=year%100,d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451),mo=Math.floor((h+l-7*m+114)/31),da=((h+l-7*m+114)%31)+1;
+    const easter=new Date(year,mo-1,da,12,0,0);
+    const add=n=>{const x=new Date(easter);x.setDate(x.getDate()+n);return d2s(x)};
+    return new Set([`${year}-01-01`,`${year}-05-01`,`${year}-05-08`,`${year}-07-14`,`${year}-08-15`,`${year}-11-01`,`${year}-11-11`,`${year}-12-25`,add(1),add(39),add(50)]);
+}
 
-/* ── PÂQUES (Computus) ── */  
-function getEaster(yr){  
-    const a=yr%19,b=Math.floor(yr/100),c=yr%100,d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451),mo=Math.floor((h+l-7*m+114)/31),da=((h+l-7*m+114)%31)+1;  
-    return new Date(yr,mo-1,da,12,0,0);  
-}  
+/* ── NUMÉRO DE SEMAINE ISO ── */
+function isoWeek(date){
+    const tmp=new Date(Date.UTC(date.getFullYear(),date.getMonth(),date.getDate()));
+    const dayN=tmp.getUTCDay()||7;
+    tmp.setUTCDate(tmp.getUTCDate()+4-dayN);
+    const yearStart=new Date(Date.UTC(tmp.getUTCFullYear(),0,1));
+    return Math.ceil((((tmp-yearStart)/86400000)+1)/7);
+}
 
-/* ── JOURS FÉRIÉS FRANÇAIS ── */  
-function getPH(year){  
-    const easter=getEaster(year);  
-    const add=n=>{const x=new Date(easter);x.setDate(x.getDate()+n);return d2s(x)};  
-    return new Set([`${year}-01-01`,`${year}-05-01`,`${year}-05-08`,`${year}-07-14`,`${year}-08-15`,`${year}-11-01`,`${year}-11-11`,`${year}-12-25`,add(1),add(39),add(50)]);  
-}  
+/* ══════════════════════════════════════════
+   ALGORITHME PRINCIPAL — JUGEMENT 06/02/2026
+   Pages 7-8, dispositif exact
+   ══════════════════════════════════════════ */
+function getCustody(date){
+    const ds=d2s(date);
+    const yr=date.getFullYear();
+    const dow=date.getDay(); // 0=Dim, 1=Lun ... 6=Sam
 
-/* ── NUMÉRO DE SEMAINE ISO ── */  
-function isoWeek(date){  
-    const tmp=new Date(Date.UTC(date.getFullYear(),date.getMonth(),date.getDate()));  
-    const dayN=tmp.getUTCDay()||7;  
-    tmp.setUTCDate(tmp.getUTCDate()+4-dayN);  
-    const yearStart=new Date(Date.UTC(tmp.getUTCFullYear(),0,1));  
-    return Math.ceil((((tmp-yearStart)/86400000)+1)/7);  
-}  
+    /* ── 1. EXCEPTION MANUELLE ── */
+    if(exceptions[ds]) return{who:exceptions[ds],why:"Exception manuelle",forced:true};
 
-/* ── VÉRIFIER SI UNE DATE EST EN VACANCES ── */  
-function getVacation(date){  
-    const t=date.getTime();  
-    for(const h of schoolHols){  
-        if(t>=s2d(h.s).getTime()&&t<=s2d(h.e).getTime()) return h;  
-    }  
-    return null;  
-}  
+    /* ── 2. FÊTE DES MÈRES / PÈRES ── */
+    if(ds===getMothersDay(yr)) return{who:"Maman",why:"Fête des Mères 💐"};
+    const fdp=new Date(yr,5,1,12,0,0);let sc=0;
+    while(sc<3){if(fdp.getDay()===0)sc++;if(sc<3)fdp.setDate(fdp.getDate()+1)}
+    if(ds===d2s(fdp)) return{who:"Papa",why:"Fête des Pères 👔"};
 
-/* ══════════════════════════════════════════  
-   ALGORITHME PRINCIPAL — JUGEMENT 06/02/2026  
-   ══════════════════════════════════════════ */  
-function getCustody(date){  
-    const ds=d2s(date);  
-    const yr=date.getFullYear();  
-    const dow=date.getDay();  
+    /* ── 3. VACANCES SCOLAIRES (PRIMAUTÉ ABSOLUE) ── */
+    const t=date.getTime();
+    for(const h of schoolHols){
+        const tStart=s2d(h.s).getTime(), tEnd=s2d(h.e).getTime();
+        if(t<tStart||t>tEnd) continue;
+        
+        // L'année de référence = année de DÉBUT des vacances (pour l'alternance pair/impair)
+        const startYear=parseInt(h.s.split('-')[0]);
+        const isEvenYear=(startYear%2===0);
 
-    /* ── 1. EXCEPTION MANUELLE ── */  
-    if(exceptions[ds]) return{who:exceptions[ds],why:"Exception manuelle",forced:true};  
+        if(h.summer){
+            // Jugement p.7 : "l'été étant partagé par quinzaine jusqu'aux 6 ans révolus"
+            const isFirstHalf=date.getDate()<=15;
+            // Même règle que petites vacances : impaire→1ère moitié Papa, paire→2ème moitié Papa
+            const papaHas=isEvenYear ? !isFirstHalf : isFirstHalf;
+            return{who:papaHas?"Papa":"Maman",why:`Vacances d'Été (${isFirstHalf?'1ère':'2ème'} quinzaine)`};
+        } else {
+            // Jugement p.7 : "la première moitié les années impaires, la seconde moitié les années paires"
+            const midTime=s2d(h.mid).getTime();
+            const isFirst=(t<midTime); // Le samedi du milieu lui-même → 2ème moitié (transition à 12h)
+            const papaHas=isEvenYear ? !isFirst : isFirst;
+            return{who:papaHas?"Papa":"Maman",why:`Vacances ${h.n} (${isFirst?'1ère':'2ème'} moitié)`};
+        }
+    }
 
-    /* ── 2. FÊTE DES MÈRES / PÈRES ── */  
-    if(ds===getMothersDay(yr)) return{who:"Maman",why:"Fête des Mères 💐"};  
-    const fdp=new Date(yr,5,1,12,0,0);let sc=0;  
-    while(sc<3){if(fdp.getDay()===0)sc++;if(sc<3)fdp.setDate(fdp.getDate()+1)}  
-    if(ds===d2s(fdp)) return{who:"Papa",why:"Fête des Pères 👔"};  
+    /* ── 4. FÊTES JUIVES (Papa, sauf pendant vacances — déjà filtré ci-dessus) ── */
+    if(relHols[ds]) return{who:"Papa",why:`${relHols[ds]}`};
 
-    /* ── 3. VACANCES SCOLAIRES (PRIMAUTÉ ABSOLUE) ── */  
-    const vac=getVacation(date);  
-    if(vac){  
-        const startYear=parseInt(vac.s.split('-')[0]);  
-        const isEvenYear=(startYear%2===0);  
-        if(vac.summer){  
-            const isFirstHalf=date.getDate()<=15;  
-            // Jugement p.7 : impaire=1ère moitié Papa, paire=2ème moitié Papa  
-            const papaHas=isEvenYear?!isFirstHalf:isFirstHalf;  
-            // Indicateur fête juive pendant vacances (info seulement)  
-            const relInfo=relHols[ds]?` (${relHols[ds]} — absorbée par vacances)`:'';  
-            return{who:papaHas?"Papa":"Maman",why:`Vacances d'Été (${isFirstHalf?'1ère':'2ème'} quinzaine)${relInfo}`};  
-        } else {  
-            const midTime=s2d(vac.mid).getTime();  
-            const t=date.getTime();  
-            const isFirst=(t<midTime);  
-            // Jugement p.7 : impaire=1ère moitié Papa
+    /* ── 5. JOURS FÉRIÉS ATTENANTS ── 
+       Jugement p.8 : "au cas où des jours fériés précéderaient ou suivraient 
+       immédiatement le début ou la fin de la période d'exercice du droit de 
+       visite et d'hébergement, celui-ci s'exercera sur l'intégralité de la période"
+       
+       Concrètement : si un jour férié touche directement un bloc Papa, il est absorbé par Papa.
+    */
+    const ph=getPH(yr);
+    if(ph.has(ds)){
+        // Vérifier si la veille ou le lendemain est un jour Papa (roulement)
+        const yesterday=new Date(date);yesterday.setDate(date.getDate()-1);
+        const tomorrow=new Date(date);tomorrow.setDate(date.getDate()+1);
+        const ywk=isoWeek(yesterday), twk=isoWeek(tomorrow);
+        const ydow=yesterday.getDay(), tdow=tomorrow.getDay();
+        
+        // La veille était-elle un jour Papa par roulement ?
+        const yEven=(ywk%2===0);
+        const yesterdayPapa=(yEven&&(ydow===5||ydow===6||ydow===0||ydow===1))||((!yEven)&&(ydow===3||ydow===4));
+        
+        // Le lendemain sera-t-il un jour Papa par roulement ?
+        const tEven=(twk%2===0);
+        const tomorrowPapa=(tEven&&(tdow===5||tdow===6||tdow===0||tdow===1))||((!tEven)&&(tdow===3||tdow===4));
+        
+        if(yesterdayPapa||tomorrowPapa){
+            return{who:"Papa",why:"Jour férié attenant (période Papa étendue)",ferie:true};
+        }
+    }
+
+    /* ── 6. ROULEMENT CLASSIQUE ── 
+       Jugement p.7 :
+       "les fins de semaines PAIRES, du VENDREDI sortie des classes au LUNDI matin rentrée des classes"
+       → Ven + Sam + Dim + Lun = Papa
+       
+       "du MERCREDI sortie des classes les semaines IMPAIRES au JEUDI matin rentrée des classes"
+       → Mer + Jeu = Papa
+       
+       Tout le reste = Maman (résidence habituelle)
+    */
+    const weekNo=isoWeek(date);
+    const even=(weekNo%2===0);
+
+    // Semaines PAIRES : Vendredi → Lundi
+    if(even && (dow===5||dow===6||dow===0||dow===1)){
+        return{who:"Papa",why:`S${weekNo} (paire) — Week-end Papa (ven→lun)`};
+    }
+
+    // Semaines IMPAIRES : Mercredi → Jeudi
+    if(!even && (dow===3||dow===4)){
+        return{who:"Papa",why:`S${weekNo} (impaire) — Mercredi Papa (mer→jeu)`};
+    }
+
+    // Tout le reste
+    return{who:"Maman",why:"Résidence habituelle"};
+}
+
+/* ══ RENDU ══ */
+function renderToday(){
+    const now=new Date();const c=getCustody(now);
+    document.getElementById('t-date').textContent=now.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+    const circ=document.getElementById('t-circle');
+    circ.className='circle '+(c.who==='Papa'?'papa':'maman');circ.textContent=c.who;
+    document.getElementById('t-reason').textContent=c.why+(c.forced?' (modifié manuellement)':'');
+    const ul=document.getElementById('upcoming');ul.innerHTML='';
+    let prev=c.who,found=0;
+    for(let i=1;i<=120&&found<5;i++){
+        const d=new Date(now);d.setDate(now.getDate()+i);const ci=getCustody(d);
+        if(ci.who!==prev){
+            ul.innerHTML+=`<div class="row"><div class="rl"><span class="rt">${d.toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'short'})}</span><span class="rs">${ci.why}</span></div><span class="${ci.who==='Papa'?'tp':'tm'}">${ci.who}</span></div>`;
+            prev=ci.who;found++;
+        }
+    }
+}
+
+let calDate=new Date();calDate.setDate(1);
+const chMonth=d=>{calDate.setMonth(calDate.getMonth()+d);renderCal()};
+const goToday=()=>{calDate=new Date();calDate.setDate(1);renderCal()};
+
+function renderCal(){
+    const yr=calDate.getFullYear(),mo=calDate.getMonth();
+    const title=new Date(yr,mo,1).toLocaleDateString('fr-FR',{month:'long',year:'numeric'});
+    document.getElementById('cal-title').textContent=title.charAt(0).toUpperCase()+title.slice(1);
+    const g=document.getElementById('cal-grid');
+    g.innerHTML=['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'].map(d=>`<div class="dname">${d}</div>`).join('');
+    const skip=(new Date(yr,mo,1).getDay()||7)-1;
+    for(let i=0;i<skip;i++) g.innerHTML+=`<div class="day empty"></div>`;
+    const todayS=d2s(new Date());
+    for(let d=1;d<=new Date(yr,mo+1,0).getDate();d++){
+        const date=new Date(yr,mo,d,12,0,0);const ds=d2s(date);
+        const c=getCustody(date);const isRel=!!relHols[ds];
+        let cls=`day ${c.who==='Papa'?'papa':'maman'}`;
+        if(ds===todayS)cls+=' today';
+        if(c.forced)cls+=' exc';
+        if(isRel)cls+=' rel';
+        if(c.ferie)cls+=' fer';
+        g.innerHTML+=`<div class="${cls}" onclick="toggleDay('${ds}')">${d}</div>`;
+    }
+}
+
+let yrView=new Date().getFullYear();
+const chYear=d=>{yrView+=d;renderYear()};
+const goYear=()=>{yrView=new Date().getFullYear();renderYear()};
+
+function renderYear(){
+    document.getElementById('yr-title').textContent=yrView;
+    const g=document.getElementById('yr-grid');g.innerHTML='';
+    const MONTHS=['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Août','Sep','Oct','Nov','Déc'];
+    const todayS=d2s(new Date());
+    for(let m=0;m<12;m++){
+        let html=`<div class="mm"><div class="mm-title">${MONTHS[m]}</div><div class="mm-grid">`;
+        html+=['L','M','M','J','V','S','D'].map(d=>`<div class="mdn">${d}</div>`).join('');
+        const skip=(new Date(yrView,m,1).getDay()||7)-1;
+        for(let i=0;i<skip;i++) html+=`<div></div>`;
+        for(let d=1;d<=new Date(yrView,m+1,0).getDate();d++){
+            const date=new Date(yrView,m,d,12,0,0);const ds=d2s(date);
+            const c=getCustody(date);const isRel=!!relHols[ds];
+            let cls=`md ${c.who==='Papa'?'papa':'maman'}`;
+            if(ds===todayS)cls+=' today';
+            if(c.forced)cls+=' exc';
+            if(isRel)cls+=' rel';
+            if(c.ferie)cls+=' fer';
+            html+=`<div class="${cls}">${d}</div>`;
+        }
+        html+=`</div></div>`;g.innerHTML+=html;
+    }
+}
+
+function toggleDay(ds){
+    if(exceptions[ds]){
+        if(confirm(`Annuler l'exception du ${ds} et revenir au calcul normal ?`)){delete exceptions[ds];saveEx();renderAll();return}
+    }
+    const nw=getCustody(s2d(ds)).who==='Papa'?'Maman':'Papa';
+    if(confirm(`Inverser exceptionnellement la garde le ${ds} pour ${nw} ?`)){exceptions[ds]=nw;saveEx();renderAll()}
+}
+function forceToday(){toggleDay(d2s(new Date()))}
+
+function stTab(t){
+    ['m','y','g'].forEach(x=>{
+        document.getElementById('sb-'+x).classList.toggle('on',x===t);
+        document.getElementById('sv-'+x).style.display=x===t?'block':'none';
+    });
+}
+function computeStats(){
+    const cur=new Date().getFullYear();const stats={months:{},years:{}};
+    [cur,cur+1].forEach(yr=>{
+        stats.years[yr]={papa:0,maman:0,tot:0};
+        for(let m=0;m<12;m++){
+            const key=`${yr}-${String(m+1).padStart(2,'0')}`;
+            stats.months[key]={papa:0,maman:0,tot:0,date:new Date(yr,m,1)};
+            for(let d=1;d<=new Date(yr,m+1,0).getDate();d++){
+                const c=getCustody(new Date(yr,m,d,12,0,0));
+                stats.years[yr].tot++;stats.months[key].tot++;
+                c.who==='Papa'?(stats.years[yr].papa++,stats.months[key].papa++):(stats.years[yr].maman++,stats.months[key].maman++);
+            }
+        }
+    });return stats;
+}
+function renderStats(){
+    const s=computeStats();
+    document.getElementById('sl-m').innerHTML=Object.keys(s.months).sort().map(k=>{
+        const d=s.months[k];const pp=Math.round(d.papa/d.tot*100)||0;
+        return`<div class="row"><span class="rt">${d.date.toLocaleDateString('fr-FR',{month:'long',year:'numeric'})}</span><span style="font-size:13px"><span class="tp">${d.papa}j (${pp}%)</span> / <span class="tm">${d.maman}j (${100-pp}%)</span></span></div>`;
+    }).join('');
+    document.getElementById('sl-y').innerHTML=Object.keys(s.years).sort().map(yr=>{
+        const d=s.years[yr];const pp=Math.round(d.papa/d.tot*100)||0;
+        return`<div class="row"><span class="rt">Année ${yr}</span><div style="text-align:right"><div class="tp">Papa : ${d.papa}j (${pp}%)</div><div class="tm">Maman : ${d.maman}j (${100-pp}%)</div></div></div>`;
+    }).join('');
+    document.getElementById('sl-g').innerHTML=Object.keys(s.years).sort().map(yr=>{
+        const d=s.years[yr];const pp=Math.round(d.papa/d.tot*100)||0;
+        return`<div class="card"><div style="padding:16px"><h3 style="text-align:center;margin-top:0">Répartition ${yr}</h3><div class="dist-bar"><div class="dp" style="width:${pp}%"></div><div class="dm" style="width:${100-pp}%"></div></div><div class="dist-lbl"><span class="tp">Papa ${pp}%</span><span class="tm">Maman ${100-pp}%</span></div></div></div>`;
+    }).join('');
+}
+
+function exportICS(){
+    const yr=new Date().getFullYear();
+    let ics="BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Garde Gabriel//FR\r\nCALSCALE:GREGORIAN\r\n";
+    let prev=null,blockStart=null;
+    for(let offset=0;offset<730;offset++){
+        const d=new Date(yr,0,1,12,0,0);d.setDate(d.getDate()+offset);
+        const ds=d2s(d);const c=getCustody(d);
+        if(c.who!==prev){
+            if(prev&&blockStart) ics+=`BEGIN:VEVENT\r\nSUMMARY:Gabriel - ${prev}\r\nDTSTART;VALUE=DATE:${blockStart.replace(/-/g,'')}\r\nDTEND;VALUE=DATE:${ds.replace(/-/g,'')}\r\nEND:VEVENT\r\n`;
+            blockStart=ds;prev=c.who;
+        }
+    }
+    if(prev&&blockStart){
+        const end=new Date(yr,0,1,12,0,0);end.setDate(end.getDate()+730);
+        ics+=`BEGIN:VEVENT\r\nSUMMARY:Gabriel - ${prev}\r\nDTSTART;VALUE=DATE:${blockStart.replace(/-/g,'')}\r\nDTEND;VALUE=DATE:${d2s(end).replace(/-/g,'')}\r\nEND:VEVENT\r\n`;
+    }
+    ics+="END:VCALENDAR\r\n";
+    const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([ics],{type:'text/calendar'}));
+    a.download='garde_gabriel.ics';a.click();
+}
+
+function sw(id,el){
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));
+    document.getElementById('v-'+id).classList.add('on');
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));el.classList.add('on');
+}
+function renderAll(){renderToday();renderCal();renderYear();renderStats()}
+
+async function syncHebcal(){
+    const lastSync=localStorage.getItem('gabriel_last_sync');const now=Date.now();
+    if(lastSync&&now-lastSync<7*24*3600*1000){document.getElementById('sync-lbl').textContent='Données à jour ✓';return}
+    try{
+        const curYr=new Date().getFullYear();const newRel={};
+        for(const yr of[curYr,curYr+1,curYr+2]){
+            const res=await fetch(`https://www.hebcal.com/hebcal?v=1&cfg=json&maj=on&min=on&year=${yr}`);
+            const data=await res.json();
+            if(!data.items)continue;
+            data.items.forEach(item=>{
+                const orig=item.title_orig||item.title||'';const ds=item.date;if(!ds)return;
+                if(orig.includes('Rosh Hashana'))newRel[ds]=orig.includes('II')?'Roch Hachana (J2)':'Roch Hachana';
+                if(orig==='Yom Kippur')newRel[ds]='Kippour';
+                if(orig==='Purim')newRel[ds]='Pourim';
+                if(orig==='Pesach I')newRel[ds]='Pessah (J1)';
+                if(orig==='Pesach II')newRel[ds]='Pessah (J2)';
+                if(orig==='Chanukah: 1 Candle'){const d1=s2d(ds);d1.setDate(d1.getDate()+1);newRel[d2s(d1)]='Hanouka (1er jour)'}
+                if(orig==='Chanukah: 8th Day')newRel[ds]='Hanouka (Dernier jour)';
+            });
+        }
+        if(Object.keys(newRel).length>5){
+            relHols=newRel;localStorage.setItem('gabriel_religious_holidays',JSON.stringify(newRel));
+            localStorage.setItem('gabriel_last_sync',String(now));
+            document.getElementById('sync-lbl').textContent='Synchronisé avec HebCal.com ✓';renderAll();
+        }
+    }catch(e){document.getElementById('sync-lbl').textContent='Hors-ligne'}
+}
+
+renderAll();setTimeout(syncHebcal,2000);
+</script>
+</body>
+</html>
