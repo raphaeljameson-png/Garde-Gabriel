@@ -22,6 +22,7 @@
             --maman-color: #FF3B30;
             --papa-bg: rgba(0, 122, 255, 0.12);
             --maman-bg: rgba(255, 59, 48, 0.12);
+            --religious-color: #AF52DE; /* Violet iOS pour les fêtes */
             --seg-bg: rgba(118, 118, 128, 0.12);
             --seg-active: #ffffff;
             --safe-area-bottom: env(safe-area-inset-bottom, 20px);
@@ -39,6 +40,7 @@
                 --border-color: rgba(84, 84, 88, 0.65);
                 --papa-bg: rgba(10, 132, 255, 0.25);
                 --maman-bg: rgba(255, 69, 58, 0.25);
+                --religious-color: #BF5AF2; /* Violet clair pour mode sombre */
                 --seg-bg: rgba(118, 118, 128, 0.24);
                 --seg-active: #636366;
             }
@@ -57,7 +59,6 @@
             justify-content: center;
         }
 
-        /* Conteneur principal */
         .app-container {
             width: 100%;
             max-width: 450px;
@@ -145,6 +146,13 @@
             box-shadow: 0 3px 8px rgba(0,0,0,0.12), 0 3px 1px rgba(0,0,0,0.04);
         }
 
+        /* Barre de répartition globale */
+        .dist-container { margin: 15px 0 5px; }
+        .dist-bar { display: flex; height: 14px; border-radius: 7px; overflow: hidden; background: var(--seg-bg); }
+        .dist-papa { background-color: var(--papa-color); transition: width 0.5s; }
+        .dist-maman { background-color: var(--maman-color); transition: width 0.5s; }
+        .dist-labels { display: flex; justify-content: space-between; font-size: 14px; margin-top: 10px; font-weight: 600; }
+
         /* Cercle de statut */
         .today-status { text-align: center; padding: 20px 10px; }
         .status-circle {
@@ -179,138 +187,45 @@
         .day.today { border: 2.5px solid var(--text-main); font-weight: 700; }
         .day.exception { position: relative; }
         .day.exception::after { content: ''; position: absolute; bottom: 3px; width: 4px; height: 4px; background: #FF9500; border-radius: 50%; }
+        /* NOUVEAU: Fêtes religieuses */
+        .day.religious { box-shadow: inset 0 0 0 2px var(--religious-color); }
 
         /* Calendar (Annuel) */
-        .year-grid-container {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            padding: 10px 0;
-        }
-        .mini-month {
-            background: var(--card-bg);
-            border-radius: 12px;
-            padding: 12px;
-        }
-        .mini-month-title {
-            font-size: 14px;
-            font-weight: 600;
-            margin-bottom: 10px;
-            text-align: center;
-            color: var(--text-main);
-        }
-        .mini-calendar-grid {
-            display: grid;
-            grid-template-columns: repeat(7, 1fr);
-            gap: 3px;
-            text-align: center;
-        }
-        .mini-day-name {
-            font-size: 9px;
-            font-weight: 500;
-            color: var(--text-muted);
-            margin-bottom: 4px;
-        }
-        .mini-day {
-            aspect-ratio: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 10px;
-            font-weight: 500;
-            border-radius: 50%;
-        }
+        .year-grid-container { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; padding: 10px 0; }
+        .mini-month { background: var(--card-bg); border-radius: 12px; padding: 12px; }
+        .mini-month-title { font-size: 14px; font-weight: 600; margin-bottom: 10px; text-align: center; color: var(--text-main); }
+        .mini-calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; text-align: center; }
+        .mini-day-name { font-size: 9px; font-weight: 500; color: var(--text-muted); margin-bottom: 4px; }
+        .mini-day { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 500; border-radius: 50%; }
+        
         .mini-day.papa { background-color: var(--papa-bg); color: var(--papa-color); }
         .mini-day.maman { background-color: var(--maman-bg); color: var(--maman-color); }
         .mini-day.today { border: 1.5px solid var(--text-main); font-weight: 700; }
         .mini-day.exception { border: 1px solid #FF9500; }
+        /* NOUVEAU: Fêtes religieuses */
+        .mini-day.religious { box-shadow: inset 0 0 0 1.5px var(--religious-color); }
+        
+        .legend-container { margin-top: 25px; display: flex; gap: 15px; justify-content: center; font-size: 12px; color: var(--text-muted); flex-wrap: wrap; }
 
-        .legend-container {
-            margin-top: 25px; display: flex; gap: 15px; justify-content: center; font-size: 13px; color: var(--text-muted);
-        }
-
-        /* ----- STYLES SPÉCIAUX POUR L'IMPRESSION (A4) ----- */
+        /* Impression */
         @media print {
-            /* Forcer le format A4 paysage pour l'année, et demander l'impression des couleurs de fond */
             @page { size: A4 landscape; margin: 12mm; }
-            
-            * {
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-            }
-
-            /* Cacher ce qui est inutile sur papier */
-            .tab-bar, .btn, .segmented-control, .calendar-nav, h1 { 
-                display: none !important; 
-            }
-            
-            /* Réinitialiser le conteneur principal pour prendre toute la page */
-            body, .app-container { 
-                background: white !important; 
-            }
-            .app-container { 
-                box-shadow: none !important; 
-                max-width: 100% !important; 
-                padding: 0 !important; 
-                margin: 0 !important;
-            }
-            
-            /* Ne garder que la vue active */
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            .tab-bar, .btn, .segmented-control, .calendar-nav, h1 { display: none !important; }
+            body, .app-container { background: white !important; }
+            .app-container { box-shadow: none !important; max-width: 100% !important; padding: 0 !important; margin: 0 !important; }
             .view { padding: 0 !important; animation: none !important; display: none !important; }
             .view.active { display: block !important; }
-
-            /* Mise en forme de l'entête (titre) */
-            .calendar-header {
-                background: transparent !important;
-                padding: 0 !important;
-                margin-bottom: 15px !important;
-                border: none !important;
-                justify-content: center !important;
-            }
-            #year-view-title, #calendar-month-year {
-                font-size: 24pt !important;
-                text-align: center;
-                width: 100%;
-                color: black !important;
-                margin: 0 !important;
-            }
-
-            /* Grille de 4 colonnes x 3 lignes pour le calendrier annuel */
-            .year-grid-container {
-                display: grid !important;
-                grid-template-columns: repeat(4, 1fr) !important;
-                grid-template-rows: repeat(3, auto) !important;
-                gap: 15px !important;
-                padding: 0 !important;
-            }
-
-            /* Style des blocs "Mois" sur le papier */
-            .mini-month {
-                background: white !important;
-                border: 1px solid #ddd !important;
-                padding: 10px !important;
-                border-radius: 8px !important;
-                break-inside: avoid;
-                page-break-inside: avoid;
-            }
-
-            .mini-month-title {
-                font-size: 12pt !important;
-                color: black !important;
-                margin-bottom: 8px !important;
-            }
+            .calendar-header { background: transparent !important; padding: 0 !important; margin-bottom: 15px !important; border: none !important; justify-content: center !important; }
+            #year-view-title, #calendar-month-year { font-size: 24pt !important; text-align: center; width: 100%; color: black !important; margin: 0 !important; }
+            .year-grid-container { display: grid !important; grid-template-columns: repeat(4, 1fr) !important; grid-template-rows: repeat(3, auto) !important; gap: 15px !important; padding: 0 !important; }
+            .mini-month { background: white !important; border: 1px solid #ddd !important; padding: 10px !important; border-radius: 8px !important; break-inside: avoid; page-break-inside: avoid; }
+            .mini-month-title { font-size: 12pt !important; color: black !important; margin-bottom: 8px !important; }
             .mini-day-name { font-size: 8pt !important; }
             .mini-day { font-size: 9pt !important; }
-
-            /* Ajustements spécifiques pour la vue "Mois" si imprimée */
             .calendar-grid { gap: 15px !important; }
             .day { font-size: 16pt !important; }
-
-            .legend-container {
-                margin-top: 15px !important;
-                font-size: 10pt !important;
-                color: black !important;
-            }
+            .legend-container { margin-top: 15px !important; font-size: 10pt !important; color: black !important; }
         }
     </style>
 </head>
@@ -356,6 +271,9 @@
             <span style="display: flex; align-items: center; gap: 4px;"><span style="color: var(--papa-color);">●</span> Papa</span>
             <span style="display: flex; align-items: center; gap: 4px;"><span style="color: var(--maman-color);">●</span> Maman</span>
             <span style="display: flex; align-items: center; gap: 4px;"><span style="color: #ff9500;">●</span> Modifié</span>
+            <span style="display: flex; align-items: center; gap: 4px;">
+                <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--religious-color);"></span> Fête juive
+            </span>
         </div>
     </div>
 
@@ -369,14 +287,15 @@
             <button class="calendar-nav" onclick="changeYearView(1)">❯</button>
         </div>
 
-        <div id="year-grid-container" class="year-grid-container">
-            <!-- Rempli par JavaScript -->
-        </div>
+        <div id="year-grid-container" class="year-grid-container"></div>
 
         <div class="legend-container" style="margin-top: 15px; margin-bottom: 15px;">
             <span style="display: flex; align-items: center; gap: 4px;"><span style="color: var(--papa-color);">●</span> Papa</span>
             <span style="display: flex; align-items: center; gap: 4px;"><span style="color: var(--maman-color);">●</span> Maman</span>
             <span style="display: flex; align-items: center; gap: 4px;"><span style="color: #ff9500;">●</span> Modifié</span>
+            <span style="display: flex; align-items: center; gap: 4px;">
+                <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--religious-color);"></span> Fête juive
+            </span>
         </div>
 
         <div style="display: flex; gap: 10px;">
@@ -390,8 +309,9 @@
         <h1>Statistiques</h1>
         
         <div class="segmented-control">
-            <div class="segment active" id="stat-tab-months" onclick="switchStatTab('months')">Mois par mois</div>
-            <div class="segment" id="stat-tab-years" onclick="switchStatTab('years')">Années civiles</div>
+            <div class="segment active" id="stat-tab-months" onclick="switchStatTab('months')">Mois</div>
+            <div class="segment" id="stat-tab-years" onclick="switchStatTab('years')">Années</div>
+            <div class="segment" id="stat-tab-global" onclick="switchStatTab('global')">Bilan Global</div>
         </div>
 
         <div id="stats-months-view">
@@ -400,6 +320,10 @@
 
         <div id="stats-years-view" style="display: none;">
             <div class="ios-list" id="stats-years-list"></div>
+        </div>
+
+        <div id="stats-global-view" style="display: none;">
+            <div id="stats-global-list"></div>
         </div>
 
         <button class="btn" style="margin-top: 25px;" onclick="exportICS()">Exporter au format iCal (.ics)</button>
@@ -411,20 +335,16 @@
     <!-- TAB BAR -->
     <div class="tab-bar">
         <a class="tab-item active" onclick="switchTab('today', this)">
-            <span class="tab-icon">🏠</span>
-            <span>Aujourd'hui</span>
+            <span class="tab-icon">🏠</span><span>Aujourd'hui</span>
         </a>
         <a class="tab-item" onclick="switchTab('calendar', this)">
-            <span class="tab-icon">📅</span>
-            <span>Mois</span>
+            <span class="tab-icon">📅</span><span>Mois</span>
         </a>
         <a class="tab-item" onclick="switchTab('year', this)">
-            <span class="tab-icon">🗓️</span>
-            <span>Année</span>
+            <span class="tab-icon">🗓️</span><span>Année</span>
         </a>
         <a class="tab-item" onclick="switchTab('stats', this)">
-            <span class="tab-icon">📊</span>
-            <span>Stats</span>
+            <span class="tab-icon">📊</span><span>Stats</span>
         </a>
     </div>
 
@@ -625,10 +545,12 @@
                 let date = new Date(year, month, d, 12, 0, 0);
                 let dateStr = getStr(date);
                 let custody = getCustody(date);
+                let isReligious = !!religiousHolidays[dateStr]; // Détecte si c'est une fête juive
                 
                 let classes = `day ${custody.status.toLowerCase()}`;
                 if(dateStr === todayStr) classes += ' today';
                 if(custody.forced) classes += ' exception';
+                if(isReligious) classes += ' religious'; // Ajoute la classe
 
                 grid.innerHTML += `<div class="${classes}" onclick="toggleDay('${dateStr}')">${d}</div>`;
             }
@@ -683,10 +605,12 @@
                     let date = new Date(yearViewDate, m, d, 12, 0, 0);
                     let dateStr = getStr(date);
                     let custody = getCustody(date);
+                    let isReligious = !!religiousHolidays[dateStr]; // Détecte si c'est une fête juive
 
                     let classes = `mini-day ${custody.status.toLowerCase()}`;
                     if(dateStr === todayStr) classes += ' today';
                     if(custody.forced) classes += ' exception';
+                    if(isReligious) classes += ' religious'; // Ajoute la classe
 
                     monthHtml += `<div class="${classes}">${d}</div>`;
                 }
@@ -700,9 +624,11 @@
         function switchStatTab(tabId) {
             document.getElementById('stat-tab-months').classList.toggle('active', tabId === 'months');
             document.getElementById('stat-tab-years').classList.toggle('active', tabId === 'years');
+            document.getElementById('stat-tab-global').classList.toggle('active', tabId === 'global');
             
             document.getElementById('stats-months-view').style.display = tabId === 'months' ? 'block' : 'none';
             document.getElementById('stats-years-view').style.display = tabId === 'years' ? 'block' : 'none';
+            document.getElementById('stats-global-view').style.display = tabId === 'global' ? 'block' : 'none';
         }
 
         function computeStats() {
@@ -741,7 +667,6 @@
         function renderStats() {
             const stats = computeStats();
             
-            // Render: Mois par mois
             const monthsContainer = document.getElementById('stats-months-list');
             monthsContainer.innerHTML = '';
             Object.keys(stats.months).sort().forEach(key => {
@@ -750,7 +675,7 @@
                 const capMonth = monthName.charAt(0).toUpperCase() + monthName.slice(1);
                 
                 const pctPapa = Math.round((data.papa / data.total) * 100) || 0;
-                const pctMaman = Math.round((data.maman / data.total) * 100) || 0;
+                const pctMaman = 100 - pctPapa;
 
                 monthsContainer.innerHTML += `
                     <div class="ios-list-row">
@@ -764,14 +689,12 @@
                 `;
             });
 
-            // Render: Années civiles
             const yearsContainer = document.getElementById('stats-years-list');
             yearsContainer.innerHTML = '';
             Object.keys(stats.years).sort().forEach(year => {
                 const data = stats.years[year];
-                
                 const pctPapa = Math.round((data.papa / data.total) * 100) || 0;
-                const pctMaman = Math.round((data.maman / data.total) * 100) || 0;
+                const pctMaman = 100 - pctPapa;
 
                 yearsContainer.innerHTML += `
                     <div class="ios-list-row" style="padding: 18px 16px;">
@@ -782,6 +705,33 @@
                             </div>
                             <div>
                                 <span class="tag-maman">Maman : ${data.maman} j <span class="pct">(${pctMaman}%)</span></span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            const globalContainer = document.getElementById('stats-global-list');
+            globalContainer.innerHTML = '';
+            Object.keys(stats.years).sort().forEach(year => {
+                const data = stats.years[year];
+                const pctPapa = Math.round((data.papa / data.total) * 100) || 0;
+                const pctMaman = 100 - pctPapa;
+
+                globalContainer.innerHTML += `
+                    <div class="ios-list">
+                        <div style="padding: 20px 16px;">
+                            <h3 style="margin: 0 0 15px 0; font-size: 18px; text-align: center; color: var(--text-main);">Répartition ${year}</h3>
+                            
+                            <div class="dist-container">
+                                <div class="dist-bar">
+                                    <div class="dist-papa" style="width: ${pctPapa}%"></div>
+                                    <div class="dist-maman" style="width: ${pctMaman}%"></div>
+                                </div>
+                                <div class="dist-labels">
+                                    <span style="color: var(--papa-color)">Papa : ${pctPapa}% <span style="font-weight:400; font-size:12px;">(${data.papa}j)</span></span>
+                                    <span style="color: var(--maman-color)">Maman : ${pctMaman}% <span style="font-weight:400; font-size:12px;">(${data.maman}j)</span></span>
+                                </div>
                             </div>
                         </div>
                     </div>
