@@ -89,7 +89,7 @@
 <div class="app">
     <div id="v-today" class="view on">
         <h1>Aujourd'hui</h1>
-        <div class="version-tag">v1.0 — Publié le 04/03/2026 à 22:47</div>
+        <div class="version-tag">v1.1 — Publié le 04/03/2026 à 22:55</div>
         <div class="hero">
             <div class="hero-date" id="t-date"></div>
             <div class="circle" id="t-circle"></div>
@@ -162,12 +162,12 @@
 
 <script>
 /* ═══════════════════════════════════════════════════════
-   GARDE GABRIEL — v12 — JUGEMENT 06/02/2026 + RÈGLES PRATIQUES
+   GARDE GABRIEL — v13 — JUGEMENT 06/02/2026 + RÈGLES PRATIQUES
    ═══════════════════════════════════════════════════════ */
 
-if(localStorage.getItem('app_version')!=='v12'){
+if(localStorage.getItem('app_version')!=='v13'){
     ['gabriel_school_holidays','gabriel_religious_holidays','gabriel_last_sync'].forEach(k=>localStorage.removeItem(k));
-    localStorage.setItem('app_version','v12');
+    localStorage.setItem('app_version','v13');
 }
 
 let exceptions=JSON.parse(localStorage.getItem('gabriel_exceptions')||'{}');
@@ -212,12 +212,12 @@ let schoolHols=JSON.parse(localStorage.getItem('gabriel_school_holidays')||'null
 
 /* ── FÊTES JUIVES (base, enrichie via HebCal) ── */
 let relHols=JSON.parse(localStorage.getItem('gabriel_religious_holidays')||'null')||{
-    "2024-10-03":"Roch Hachana","2024-10-04":"Roch Hachana (J2)","2024-10-12":"Kippour",
+    "2024-10-03":"Roch Hachana","2024-10-04":"Roch Hachana (J2)","2024-10-12":"Kippour","2024-10-24":"Shmini 'Atsérêt",
     "2024-12-26":"Hanouka (1er jour)","2025-01-02":"Hanouka (Dernier jour)",
     "2025-03-14":"Pourim","2025-04-13":"Pessah (J1)","2025-04-14":"Pessah (J2)",
-    "2025-09-23":"Roch Hachana","2025-09-24":"Roch Hachana (J2)","2025-10-02":"Kippour",
+    "2025-09-23":"Roch Hachana","2025-09-24":"Roch Hachana (J2)","2025-10-02":"Kippour","2025-10-14":"Shmini 'Atsérêt",
     "2025-12-15":"Hanouka (1er jour)","2025-12-22":"Hanouka (Dernier jour)",
-    "2026-03-03":"Pourim","2026-04-02":"Pessah (J1)","2026-04-03":"Pessah (J2)"
+    "2026-03-03":"Pourim","2026-04-02":"Pessah (J1)","2026-04-03":"Pessah (J2)","2026-10-03":"Shmini 'Atsérêt"
 };
 
 /* ── FÊTE DES MÈRES ── */
@@ -501,6 +501,7 @@ async function syncHebcal(){
                 if(orig==='Purim')newRel[ds]='Pourim';
                 if(orig==='Pesach I')newRel[ds]='Pessah (J1)';
                 if(orig==='Pesach II')newRel[ds]='Pessah (J2)';
+                if(orig==='Shmini Atzeret')newRel[ds]="Shmini 'Atsérêt";
                 if(orig==='Chanukah: 1 Candle'){const d1=s2d(ds);d1.setDate(d1.getDate()+1);newRel[d2s(d1)]='Hanouka (1er jour)'}
                 if(orig==='Chanukah: 8th Day')newRel[ds]='Hanouka (Dernier jour)';
             });
