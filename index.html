@@ -180,28 +180,22 @@
 
 <script>
 /* ═══════════════════════════════════════════════════════
-   GARDE GABRIEL — v6 — JUGEMENT RELIGIEUX STRICT
-   ═══════════════════════════════════════════════════════
-   PRIORITÉS STRICTES :
-   1. Exception manuelle
-   2. Fête des Mères / Pères
-   3. Fêtes Juives (PAPA EXCLUSIF) -> Prime sur les vacances !
-   4. Vacances scolaires
-   5. Lundi férié
-   6. Roulement
+   GARDE GABRIEL — v8 — CORRECTION STRICTE DU JUGEMENT
    ═══════════════════════════════════════════════════════ */
 
-if (localStorage.getItem('app_version') !== 'v6') {
+if (localStorage.getItem('app_version') !== 'v8') {
     ['gabriel_school_holidays','gabriel_religious_holidays','gabriel_last_sync'].forEach(k => localStorage.removeItem(k));
-    localStorage.setItem('app_version','v6');
+    localStorage.setItem('app_version','v8');
 }
 
 let exceptions = JSON.parse(localStorage.getItem('gabriel_exceptions')||'{}');
 const saveEx = () => localStorage.setItem('gabriel_exceptions', JSON.stringify(exceptions));
 
 const d2s = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+// L'heure 12h00 est cruciale pour que le passage de bras des vacances se fasse exactement au milieu
 const s2d = s => { const [y,m,j]=s.split('-').map(Number); return new Date(y,m-1,j,12,0,0); };
 
+// BASE ÉTENDUE JUSQU'À 2030 (Prévisions exactes ou ajustées Zone C)
 let schoolHols = JSON.parse(localStorage.getItem('gabriel_school_holidays')||'null') || [
     {n:"Toussaint",  s:"2024-10-19", e:"2024-11-03", mid:"2024-10-26"},
     {n:"Noël",       s:"2024-12-21", e:"2025-01-05", mid:"2024-12-28"},
@@ -212,17 +206,33 @@ let schoolHols = JSON.parse(localStorage.getItem('gabriel_school_holidays')||'nu
     {n:"Noël",       s:"2025-12-20", e:"2026-01-04", mid:"2025-12-27"},
     {n:"Hiver",      s:"2026-02-21", e:"2026-03-08", mid:"2026-02-28"},
     {n:"Printemps",  s:"2026-04-18", e:"2026-05-03", mid:"2026-04-25"},
-    {n:"Été",        s:"2026-07-04", e:"2026-08-31", summer:true}
+    {n:"Été",        s:"2026-07-04", e:"2026-08-31", summer:true},
+    {n:"Toussaint",  s:"2026-10-17", e:"2026-11-01", mid:"2026-10-24"},
+    {n:"Noël",       s:"2026-12-19", e:"2027-01-03", mid:"2026-12-26"},
+    {n:"Hiver",      s:"2027-02-20", e:"2027-03-07", mid:"2027-02-27"},
+    {n:"Printemps",  s:"2027-04-17", e:"2027-05-02", mid:"2027-04-24"},
+    {n:"Été",        s:"2027-07-06", e:"2027-08-31", summer:true},
+    {n:"Toussaint",  s:"2027-10-23", e:"2027-11-07", mid:"2027-10-30"},
+    {n:"Noël",       s:"2027-12-18", e:"2028-01-02", mid:"2027-12-25"},
+    {n:"Hiver",      s:"2028-02-19", e:"2028-03-05", mid:"2028-02-26"},
+    {n:"Printemps",  s:"2028-04-15", e:"2028-04-30", mid:"2028-04-22"},
+    {n:"Été",        s:"2028-07-06", e:"2028-08-31", summer:true},
+    {n:"Toussaint",  s:"2028-10-21", e:"2028-11-05", mid:"2028-10-28"},
+    {n:"Noël",       s:"2028-12-23", e:"2029-01-07", mid:"2028-12-30"},
+    {n:"Hiver",      s:"2029-02-17", e:"2029-03-04", mid:"2029-02-24"},
+    {n:"Printemps",  s:"2029-04-14", e:"2029-04-29", mid:"2029-04-21"},
+    {n:"Été",        s:"2029-07-06", e:"2029-08-31", summer:true},
+    {n:"Toussaint",  s:"2029-10-20", e:"2029-11-04", mid:"2029-10-27"},
+    {n:"Noël",       s:"2029-12-22", e:"2030-01-06", mid:"2029-12-29"},
+    {n:"Hiver",      s:"2030-02-23", e:"2030-03-10", mid:"2030-03-02"},
+    {n:"Printemps",  s:"2030-04-20", e:"2030-05-05", mid:"2030-04-27"},
+    {n:"Été",        s:"2030-07-06", e:"2030-08-31", summer:true}
 ];
 
-// Fêtes avec les vraies dates (26 déc et 2 janv y sont)
 let relHols = JSON.parse(localStorage.getItem('gabriel_religious_holidays')||'null') || {
     "2024-10-03":"Roch Hachana","2024-10-04":"Roch Hachana (J2)","2024-10-12":"Kippour",
     "2024-12-26":"Hanouka (1er jour)", "2025-01-02":"Hanouka (Dernier jour)",
-    "2025-03-14":"Pourim","2025-04-13":"Pessah (J1)","2025-04-14":"Pessah (J2)",
-    "2025-09-23":"Roch Hachana","2025-09-24":"Roch Hachana (J2)","2025-10-02":"Kippour",
-    "2025-12-15":"Hanouka (1er jour)","2025-12-22":"Hanouka (Dernier jour)",
-    "2026-03-03":"Pourim","2026-04-02":"Pessah (J1)","2026-04-03":"Pessah (J2)"
+    "2025-03-14":"Pourim","2025-04-13":"Pessah (J1)","2025-04-14":"Pessah (J2)"
 };
 
 function getMothersDay(yr) {
@@ -242,13 +252,13 @@ function getPH(year){
     return new Set([`${year}-01-01`,`${year}-05-01`,`${year}-05-08`,`${year}-07-14`,`${year}-08-15`,`${year}-11-01`,`${year}-11-11`,`${year}-12-25`,add(1),add(39),add(50)]);
 }
 
-// ── NOUVEL ALGORITHME D'ATTRIBUTION ──
+// ── ALGORITHME JUGEMENT PAGE 7 & 8 STRICTEMENT APPLIQUÉ ──
 function getCustody(date, noMonday=false){
     const ds = d2s(date);
     const yr = date.getFullYear();
     const dow = date.getDay();
 
-    // 1. Exception
+    // 1. Exception manuelle
     if(exceptions[ds]) return {who:exceptions[ds], why:"Exception manuelle", forced:true};
 
     // 2. Fête Mères/Pères
@@ -257,26 +267,31 @@ function getCustody(date, noMonday=false){
     while(sunCount<3){ if(fdp.getDay()===0) sunCount++; if(sunCount<3) fdp.setDate(fdp.getDate()+1); }
     if(ds === d2s(fdp)) return {who:"Papa", why:"Fête des Pères 👔"};
 
-    // 3. FÊTES JUIVES -> ATTRIBUTION STRICTE À PAPA (PRIME SUR LES VACANCES)
-    if(relHols[ds]) return {who: "Papa", why: `${relHols[ds]}`};
-
-    // 4. Vacances Scolaires
+    // 3. VACANCES SCOLAIRES
     const t = date.getTime();
     for(const h of schoolHols){
         if(t < s2d(h.s).getTime() || t > s2d(h.e).getTime()) continue;
         const startYear = parseInt(h.s.split('-')[0]);
         const isEvenYear = (startYear % 2 === 0);
+        
         if(h.summer){
             const isFirstHalfOfMonth = date.getDate() <= 15;
-            const papaHas = isEvenYear ? isFirstHalfOfMonth : !isFirstHalfOfMonth;
+            // Jugement: Père a 1ère moitié impaire, 2ème moitié paire
+            const papaHas = isEvenYear ? !isFirstHalfOfMonth : isFirstHalfOfMonth;
             return {who: papaHas?"Papa":"Maman", why:`Vacances d'Été (${isFirstHalfOfMonth?'1ère':'2ème'} quinzaine)`};
         } else {
             const midTime = s2d(h.mid).getTime();
             const isFirst = t < midTime;
-            const papaHas = isEvenYear ? isFirst : !isFirst;
-            return {who: papaHas?"Papa":"Maman", why:`Vacances de ${h.n}`};
+            // CORRECTION CRITIQUE DU JUGEMENT (Page 7)
+            // Année impaire = Père a la 1ère moitié (isFirst)
+            // Année paire = Père a la 2ème moitié (!isFirst)
+            const papaHas = isEvenYear ? !isFirst : isFirst;
+            return {who: papaHas?"Papa":"Maman", why:`Vacances de ${h.n} (${isFirst?'1ère':'2ème'} moitié)`};
         }
     }
+
+    // 4. FÊTES JUIVES -> ATTRIBUTION À PAPA (Hors vacances)
+    if(relHols[ds]) return {who: "Papa", why: `${relHols[ds]}`};
 
     // 5. Lundi Férié
     if(!noMonday && dow===1 && getPH(yr).has(ds)){
@@ -285,7 +300,8 @@ function getCustody(date, noMonday=false){
         return {who:c.who, why:`Lundi férié (suite ${c.who})`, ferie:true};
     }
 
-    // 6. Roulement
+    // 6. Roulement Classique
+    // L'attribution des semaines paires/impaires suit le numéro ISO de la semaine
     const tmp = new Date(Date.UTC(yr, date.getMonth(), date.getDate()));
     const dayN = tmp.getUTCDay()||7;
     tmp.setUTCDate(tmp.getUTCDate()+4-dayN);
@@ -293,12 +309,15 @@ function getCustody(date, noMonday=false){
     const weekNo = Math.ceil((((tmp-yearStart)/86400000)+1)/7);
     const even = weekNo % 2 === 0;
 
-    if(even && (dow===5||dow===6||dow===0)) return {who:"Papa", why:`S${weekNo} paire — week-end Papa`};
-    if(!even && dow===3)                     return {who:"Papa", why:`S${weekNo} impaire — mercredi Papa`};
+    // Jugement (Page 7) : Fin de semaines paires pour le Père
+    if(even && (dow===5||dow===6||dow===0)) return {who:"Papa", why:`Semaine ${weekNo} (Paire) — Week-end Papa`};
+    // Jugement (Page 7) : Mercredi sortie des classes les semaines impaires pour le Père
+    if(!even && dow===3)                     return {who:"Papa", why:`Semaine ${weekNo} (Impaire) — Mercredi Papa`};
+    
     return {who:"Maman", why:"Roulement classique"};
 }
 
-// ── RENDU VISUEL ──
+// ── FONCTIONS D'AFFICHAGE ──
 function renderToday(){
     const now=new Date(); const c=getCustody(now);
     document.getElementById('t-date').textContent = now.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
@@ -339,7 +358,7 @@ function renderCal(){
         let cls=`day ${c.who==='Papa'?'papa':'maman'}`;
         if(ds===todayS) cls+=' today';
         if(c.forced) cls+=' exc';
-        if(isRel) cls+=' rel'; // La bague violette s'affiche TOUJOURS
+        if(isRel) cls+=' rel'; // Bague violette pour l'info des fêtes juives
         if(c.ferie) cls+=' fer';
         g.innerHTML+=`<div class="${cls}" onclick="toggleDay('${ds}')">${d}</div>`;
     }
@@ -365,7 +384,7 @@ function renderYear(){
             let cls=`md ${c.who==='Papa'?'papa':'maman'}`;
             if(ds===todayS) cls+=' today';
             if(c.forced) cls+=' exc';
-            if(isRel) cls+=' rel'; // Bague violette garantie
+            if(isRel) cls+=' rel';
             if(c.ferie) cls+=' fer';
             html+=`<div class="${cls}">${d}</div>`;
         }
@@ -449,7 +468,7 @@ async function syncHebcal(){
     if(lastSync && now-lastSync < 7*24*3600*1000){ document.getElementById('sync-lbl').textContent='Données à jour ✓'; return; }
     try {
         const curYr=new Date().getFullYear(); const newRel={};
-        for(const yr of [curYr, curYr+1]){
+        for(const yr of [curYr, curYr+1, curYr+2]){
             const res=await fetch(`https://www.hebcal.com/hebcal?v=1&cfg=json&maj=on&min=on&year=${yr}`);
             const data=await res.json();
             if(!data.items) continue;
