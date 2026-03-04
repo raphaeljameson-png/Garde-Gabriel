@@ -89,7 +89,7 @@
 <div class="app">
     <div id="v-today" class="view on">
         <h1>Aujourd'hui</h1>
-        <div class="version-tag">v1.1 — Publié le 04/03/2026 à 22:55</div>
+        <div class="version-tag">v1.2 — Affichage prioritaire des fêtes</div>
         <div class="hero">
             <div class="hero-date" id="t-date"></div>
             <div class="circle" id="t-circle"></div>
@@ -162,12 +162,12 @@
 
 <script>
 /* ═══════════════════════════════════════════════════════
-   GARDE GABRIEL — v13 — JUGEMENT 06/02/2026 + RÈGLES PRATIQUES
+   GARDE GABRIEL — v14 — JUGEMENT 06/02/2026 + RÈGLES PRATIQUES
    ═══════════════════════════════════════════════════════ */
 
-if(localStorage.getItem('app_version')!=='v13'){
+if(localStorage.getItem('app_version')!=='v14'){
     ['gabriel_school_holidays','gabriel_religious_holidays','gabriel_last_sync'].forEach(k=>localStorage.removeItem(k));
-    localStorage.setItem('app_version','v13');
+    localStorage.setItem('app_version','v14');
 }
 
 let exceptions=JSON.parse(localStorage.getItem('gabriel_exceptions')||'{}');
@@ -255,12 +255,16 @@ function getCustody(date){
     const yr=date.getFullYear();
     const dow=date.getDay(); 
 
-    if(exceptions[ds]) return{who:exceptions[ds],why:"Exception manuelle",forced:true};
+    // On détecte si c'est une fête religieuse pour l'affichage visuel
+    let isRel = !!relHols[ds];
+    let relText = isRel ? ` (+ ${relHols[ds]})` : "";
 
-    if(ds===getMothersDay(yr)) return{who:"Maman",why:"Fête des Mères 💐"};
+    if(exceptions[ds]) return{who:exceptions[ds],why:"Exception manuelle" + relText, forced:true, rel: isRel};
+
+    if(ds===getMothersDay(yr)) return{who:"Maman",why:"Fête des Mères 💐" + relText, rel: isRel};
     const fdp=new Date(yr,5,1,12,0,0);let sc=0;
     while(sc<3){if(fdp.getDay()===0)sc++;if(sc<3)fdp.setDate(fdp.getDate()+1)}
-    if(ds===d2s(fdp)) return{who:"Papa",why:"Fête des Pères 👔"};
+    if(ds===d2s(fdp)) return{who:"Papa",why:"Fête des Pères 👔" + relText, rel: isRel};
 
     /* ── VACANCES SCOLAIRES ── */
     const t=date.getTime();
@@ -293,7 +297,7 @@ function getCustody(date){
             const papaHas = isEvenYear ? isPapaBlockEvenYear : isPapaBlockOddYear;
             
             const blockNames = ["1ère quinzaine de Juillet", "2ème quinzaine de Juillet", "1ère quinzaine d'Août", "2ème quinzaine d'Août"];
-            return {who: papaHas ? "Papa" : "Maman", why: `Été (${blockNames[block]})`};
+            return {who: papaHas ? "Papa" : "Maman", why: `Été (${blockNames[block]})${relText}`, rel: isRel};
             
         } else {
             // Petites vacances
@@ -301,11 +305,12 @@ function getCustody(date){
             // si t < midH (samedi), ça couvre jusqu'à la nuit du vendredi au samedi incluse.
             const isFirst = (t < midH.getTime());
             const papaHas = isEvenYear ? !isFirst : isFirst;
-            return {who: papaHas ? "Papa" : "Maman", why: `Vacances ${h.n} (${isFirst ? '1ère' : '2ème'} moitié)`};
+            return {who: papaHas ? "Papa" : "Maman", why: `Vacances ${h.n} (${isFirst ? '1ère' : '2ème'} moitié)${relText}`, rel: isRel};
         }
     }
 
-    if(relHols[ds]) {
+    // Fêtes religieuses HORS vacances scolaires
+    if(isRel) {
         const relParent = (yr % 2 === 0) ? "Papa" : "Maman";
         return{who: relParent, why:`${relHols[ds]} (${relParent})`, rel: true};
     }
@@ -317,27 +322,27 @@ function getCustody(date){
     const tomorrowDS = d2s(tomorrow);
 
     if(dow===1 && isEvenWk && ph.has(ds)) {
-        return {who:"Papa", why:"Férié le lundi (prolonge le week-end)", ferie:true};
+        return {who:"Papa", why:`Férié le lundi (prolonge le week-end)${relText}`, ferie:true, rel: isRel};
     }
     if(dow===4 && !isEvenWk && ph.has(ds)) {
-        return {who:"Papa", why:"Férié le jeudi (prolonge le mercredi)", ferie:true};
+        return {who:"Papa", why:`Férié le jeudi (prolonge le mercredi)${relText}`, ferie:true, rel: isRel};
     }
     if(dow===4 && isEvenWk && ph.has(tomorrowDS)) {
-        return {who:"Papa", why:"Férié le vendredi (anticipe le week-end)", ferie:true};
+        return {who:"Papa", why:`Férié le vendredi (anticipe le week-end)${relText}`, ferie:true, rel: isRel};
     }
     if(dow===2 && !isEvenWk && ph.has(tomorrowDS)) {
-        return {who:"Papa", why:"Férié le mercredi (anticipe le mercredi)", ferie:true};
+        return {who:"Papa", why:`Férié le mercredi (anticipe le mercredi)${relText}`, ferie:true, rel: isRel};
     }
 
     /* ── ROULEMENT NORMAL ── */
     if(isEvenWk && (dow===5||dow===6||dow===0)){
-        return{who:"Papa",why:`S${weekNo} (paire) — Week-end Papa`};
+        return{who:"Papa",why:`S${weekNo} (paire) — Week-end Papa${relText}`, rel: isRel};
     }
     if(!isEvenWk && (dow===3)){
-        return{who:"Papa",why:`S${weekNo} (impaire) — Nuit du Mercredi`};
+        return{who:"Papa",why:`S${weekNo} (impaire) — Nuit du Mercredi${relText}`, rel: isRel};
     }
 
-    return{who:"Maman",why:"Résidence habituelle"};
+    return{who:"Maman",why:`Résidence habituelle${relText}`, rel: isRel};
 }
 
 /* ══ RENDU ══ */
