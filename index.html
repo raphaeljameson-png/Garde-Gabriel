@@ -62,6 +62,7 @@
         .day.exc::after{content:'';position:absolute;bottom:2px;width:4px;height:4px;background:var(--exception);border-radius:50%}
         .day.rel{box-shadow:inset 0 0 0 2px var(--religious)}
         .day.fer{box-shadow:inset 0 0 0 2px var(--ferie)}
+        .day.vac{text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1.5px}
         .yr-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px}
         .mm{background:var(--card);border-radius:12px;padding:10px}
         .mm-title{font-size:12px;font-weight:600;text-align:center;margin-bottom:7px}
@@ -73,6 +74,7 @@
         .md.exc::after{content:'';position:absolute;bottom:1px;width:3px;height:3px;background:var(--exception);border-radius:50%}
         .md.rel{box-shadow:inset 0 0 0 1.5px var(--religious)}
         .md.fer{box-shadow:inset 0 0 0 1.5px var(--ferie)}
+        .md.vac{text-decoration:underline;text-underline-offset:1.5px;text-decoration-thickness:1px}
         .legend{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;font-size:11px;color:var(--muted);margin:14px 0 6px}
         .leg{display:flex;align-items:center;gap:4px} .ldot{width:10px;height:10px;border-radius:50%}
         .dist-bar{display:flex;height:12px;border-radius:6px;overflow:hidden;background:var(--seg);margin:12px 0 8px}
@@ -89,7 +91,6 @@
             .view { display: none !important; padding: 0 !important; } 
             .view.on { display: block !important; }
             .card { border: none !important; box-shadow: none !important; margin: 0 !important; padding: 0 !important; break-inside: avoid; }
-            /* Impression Année : 3 colonnes pour A4 Portrait */
             #v-year.on .print-header { display: block !important; }
             #v-year.on .cal-nav h2 { display: none !important; }
             #v-year.on .yr-grid { grid-template-columns: repeat(3, 1fr) !important; gap: 15px !important; }
@@ -101,7 +102,7 @@
 <div class="app">
     <div id="v-today" class="view on">
         <h1>Aujourd'hui</h1>
-        <div class="version-tag">v2.0 — Cloud Sync activé (05/03/2026)</div>
+        <div class="version-tag">v2.1 — Vacances soulignées (05/03/2026)</div>
         <div class="hero">
             <div class="hero-date" id="t-date"></div>
             <div class="circle" id="t-circle"></div>
@@ -131,6 +132,7 @@
             <span class="leg"><span class="ldot" style="background:var(--exception)"></span>Modifié</span>
             <span class="leg"><span class="ldot" style="border:2px solid var(--religious);background:transparent"></span>Fête juive</span>
             <span class="leg"><span class="ldot" style="border:2px solid var(--ferie);background:transparent"></span>Férié étendu</span>
+            <span class="leg"><span style="text-decoration:underline;text-underline-offset:2px">Vacances</span></span>
         </div>
     </div>
     <div id="v-year" class="view">
@@ -149,6 +151,7 @@
             <span class="leg"><span class="ldot" style="background:var(--maman)"></span>Maman</span>
             <span class="leg"><span class="ldot" style="background:var(--exception)"></span>Modifié</span>
             <span class="leg"><span class="ldot" style="border:2px solid var(--religious);background:transparent"></span>Fête juive</span>
+            <span class="leg"><span style="text-decoration:underline;text-underline-offset:2px">Vacances</span></span>
         </div>
         <div class="btn-row">
             <button class="btn btn-outline" onclick="goYear()">Année en cours</button>
@@ -181,12 +184,12 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebas
 import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 /* ═══════════════════════════════════════════════════════
-   GARDE GABRIEL — CLOUD SYNC + RÈGLES FÉRIÉS STRICTES
+   GARDE GABRIEL — CLOUD SYNC + RÈGLES FÉRIÉS STRICTES + VACANCES
    ═══════════════════════════════════════════════════════ */
 
-if(localStorage.getItem('app_version')!=='v16'){
+if(localStorage.getItem('app_version')!=='v17'){
     ['gabriel_school_holidays','gabriel_religious_holidays','gabriel_last_sync'].forEach(k=>localStorage.removeItem(k));
-    localStorage.setItem('app_version','v16');
+    localStorage.setItem('app_version','v17');
 }
 
 let exceptions=JSON.parse(localStorage.getItem('gabriel_exceptions')||'{}');
@@ -309,24 +312,35 @@ function getCustody(date){
     const ds=d2s(date);
     const yr=date.getFullYear();
     const dow=date.getDay(); 
+    const t=date.getTime();
 
     let isRel = !!relHols[ds];
     let relText = isRel ? ` (+ ${relHols[ds]})` : "";
 
-    if(exceptions[ds]) return{who:exceptions[ds],why:"Exception manuelle" + relText, forced:true, rel: isRel};
-
-    if(ds===getMothersDay(yr)) return{who:"Maman",why:"Fête des Mères 💐" + relText, rel: isRel};
-    const fdp=new Date(yr,5,1,12,0,0);let sc=0;
-    while(sc<3){if(fdp.getDay()===0)sc++;if(sc<3)fdp.setDate(fdp.getDate()+1)}
-    if(ds===d2s(fdp)) return{who:"Papa",why:"Fête des Pères 👔" + relText, rel: isRel};
-
-    /* ── VACANCES SCOLAIRES ── */
-    const t=date.getTime();
+    // ── Détection Globale des Vacances Scolaires (pour le soulignement) ──
+    let isVac = false;
     for(const h of schoolHols){
         const startH = s2d(h.s);
         const firstNight = new Date(startH);
         firstNight.setDate(firstNight.getDate() - 1); 
-        
+        const endH = s2d(h.e); 
+        if(t >= firstNight.getTime() && t <= endH.getTime()){
+            isVac = true; break;
+        }
+    }
+
+    if(exceptions[ds]) return{who:exceptions[ds],why:"Exception manuelle" + relText, forced:true, rel: isRel, vac: isVac};
+    if(ds===getMothersDay(yr)) return{who:"Maman",why:"Fête des Mères 💐" + relText, rel: isRel, vac: isVac};
+    
+    const fdp=new Date(yr,5,1,12,0,0);let sc=0;
+    while(sc<3){if(fdp.getDay()===0)sc++;if(sc<3)fdp.setDate(fdp.getDate()+1)}
+    if(ds===d2s(fdp)) return{who:"Papa",why:"Fête des Pères 👔" + relText, rel: isRel, vac: isVac};
+
+    /* ── LOGIQUE DES VACANCES SCOLAIRES ── */
+    for(const h of schoolHols){
+        const startH = s2d(h.s);
+        const firstNight = new Date(startH);
+        firstNight.setDate(firstNight.getDate() - 1); 
         const endH = s2d(h.e); 
         if(t < firstNight.getTime() || t > endH.getTime()) continue;
         
@@ -348,19 +362,19 @@ function getCustody(date){
             const papaHas = isEvenYear ? isPapaBlockEvenYear : isPapaBlockOddYear;
             
             const blockNames = ["1ère quinzaine de Juillet", "2ème quinzaine de Juillet", "1ère quinzaine d'Août", "2ème quinzaine d'Août"];
-            return {who: papaHas ? "Papa" : "Maman", why: `Été (${blockNames[block]})${relText}`, rel: isRel};
+            return {who: papaHas ? "Papa" : "Maman", why: `Été (${blockNames[block]})${relText}`, rel: isRel, vac: isVac};
             
         } else {
             const midH = s2d(h.mid);
             const isFirst = (t < midH.getTime());
             const papaHas = isEvenYear ? !isFirst : isFirst;
-            return {who: papaHas ? "Papa" : "Maman", why: `Vacances ${h.n} (${isFirst ? '1ère' : '2ème'} moitié)${relText}`, rel: isRel};
+            return {who: papaHas ? "Papa" : "Maman", why: `Vacances ${h.n} (${isFirst ? '1ère' : '2ème'} moitié)${relText}`, rel: isRel, vac: isVac};
         }
     }
 
     if(isRel) {
         const relParent = (yr % 2 === 0) ? "Papa" : "Maman";
-        return{who: relParent, why:`${relHols[ds]} (${relParent})`, rel: true};
+        return{who: relParent, why:`${relHols[ds]} (${relParent})`, rel: true, vac: isVac};
     }
 
     const ph = getPH(yr);
@@ -374,30 +388,30 @@ function getCustody(date){
     /* ── JOURS FÉRIÉS ET PONTS ── */
     if(dow===1 && ph.has(ds)) {
         const who = isEvenWk ? "Maman" : "Papa";
-        return {who: who, why: `Lundi férié (prolonge le week-end)${relText}`, ferie:true, rel: isRel};
+        return {who: who, why: `Lundi férié (prolonge le week-end)${relText}`, ferie:true, rel: isRel, vac: isVac};
     }
     if(dow===5 && ph.has(ds)) {
         const who = isEvenWk ? "Papa" : "Maman";
-        return {who: who, why: `Vendredi férié (anticipe le week-end)${relText}`, ferie:true, rel: isRel};
+        return {who: who, why: `Vendredi férié (anticipe le week-end)${relText}`, ferie:true, rel: isRel, vac: isVac};
     }
     if(dow===4 && ph.has(ds)) {
         const who = isEvenWk ? "Papa" : "Maman";
-        return {who: who, why: `Jeudi férié (pont avec le week-end)${relText}`, ferie:true, rel: isRel};
+        return {who: who, why: `Jeudi férié (pont avec le week-end)${relText}`, ferie:true, rel: isRel, vac: isVac};
     }
     if(dow===5 && ph.has(yesterdayDS)) {
         const who = isEvenWk ? "Papa" : "Maman";
-        return {who: who, why: `Pont du vendredi${relText}`, ferie:true, rel: isRel};
+        return {who: who, why: `Pont du vendredi${relText}`, ferie:true, rel: isRel, vac: isVac};
     }
 
     /* ── ROULEMENT NORMAL ── */
     if(isEvenWk && (dow===5||dow===6||dow===0)){
-        return{who:"Papa",why:`S${weekNo} (paire) — Week-end Papa${relText}`, rel: isRel};
+        return{who:"Papa",why:`S${weekNo} (paire) — Week-end Papa${relText}`, rel: isRel, vac: isVac};
     }
     if(!isEvenWk && (dow===3)){
-        return{who:"Papa",why:`S${weekNo} (impaire) — Nuit du Mercredi${relText}`, rel: isRel};
+        return{who:"Papa",why:`S${weekNo} (impaire) — Nuit du Mercredi${relText}`, rel: isRel, vac: isVac};
     }
 
-    return{who:"Maman",why:`Résidence habituelle${relText}`, rel: isRel};
+    return{who:"Maman",why:`Résidence habituelle${relText}`, rel: isRel, vac: isVac};
 }
 
 /* ══ RENDU ══ */
@@ -439,6 +453,7 @@ function renderCal(){
         if(c.forced)cls+=' exc';
         if(c.rel)cls+=' rel';
         if(c.ferie)cls+=' fer';
+        if(c.vac)cls+=' vac';
         g.innerHTML+=`<div class="${cls}" onclick="toggleDay('${ds}')">${d}</div>`;
     }
 }
@@ -467,6 +482,7 @@ function renderYear(){
             if(c.forced)cls+=' exc';
             if(c.rel)cls+=' rel';
             if(c.ferie)cls+=' fer';
+            if(c.vac)cls+=' vac';
             html+=`<div class="${cls}" onclick="toggleDay('${ds}')">${d}</div>`;
         }
         html+=`</div></div>`;g.innerHTML+=html;
@@ -560,7 +576,7 @@ async function syncHebcal(){
                 const orig=item.title_orig||item.title||'';const ds=item.date;if(!ds)return;
                 if(orig.includes('Rosh Hashana'))newRel[ds]=orig.includes('II')?'Roch Hachana (J2)':'Roch Hachana';
                 if(orig==='Yom Kippur')newRel[ds]='Kippour';
-                if(orig==='Purim')newRel[ds]='Pourim';
+                if(orig==='Pourim')newRel[ds]='Pourim';
                 if(orig==='Pesach I')newRel[ds]='Pessah (J1)';
                 if(orig==='Pesach II')newRel[ds]='Pessah (J2)';
                 if(orig==='Shmini Atzeret')newRel[ds]="Shmini 'Atsérêt";
