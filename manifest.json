@@ -1,0 +1,8 @@
+{
+  "name": "Garde Gabriel",
+  "short_name": "Gabriel",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#e5e5ea",
+  "theme_color": "#007AFF"
+}
