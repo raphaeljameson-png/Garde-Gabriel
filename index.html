@@ -160,18 +160,60 @@
     </div>
 </div>
 
-<script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
 /* ═══════════════════════════════════════════════════════
-   GARDE GABRIEL — v14 — JUGEMENT 06/02/2026 + RÈGLES PRATIQUES
+   GARDE GABRIEL — CLOUD SYNC
    ═══════════════════════════════════════════════════════ */
 
-if(localStorage.getItem('app_version')!=='v14'){
+if(localStorage.getItem('app_version')!=='v15'){
     ['gabriel_school_holidays','gabriel_religious_holidays','gabriel_last_sync'].forEach(k=>localStorage.removeItem(k));
-    localStorage.setItem('app_version','v14');
+    localStorage.setItem('app_version','v15');
 }
 
 let exceptions=JSON.parse(localStorage.getItem('gabriel_exceptions')||'{}');
-const saveEx=()=>localStorage.setItem('gabriel_exceptions',JSON.stringify(exceptions));
+
+// --- FIREBASE CONFIGURATION ---
+const firebaseConfig = {
+  apiKey: "AIzaSyDlqyLy8Uy2mXXRruuFJmEEX6vZ_InQ1JA",
+  authDomain: "garde-gabriel.firebaseapp.com",
+  projectId: "garde-gabriel",
+  storageBucket: "garde-gabriel.firebasestorage.app",
+  messagingSenderId: "781312886263",
+  appId: "1:781312886263:web:3a749e6ef8e52cc6f99af2"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const docRef = doc(db, "garde", "exceptions");
+
+// --- SYNCHRONISATION EN TEMPS RÉEL ---
+onSnapshot(docRef, (snap) => {
+    if (snap.exists()) {
+        const remoteData = snap.data();
+        // Sécurité : si la base en ligne est vide mais que le téléphone a des données, on les envoie
+        if (Object.keys(remoteData).length === 0 && Object.keys(exceptions).length > 0) {
+            setDoc(docRef, exceptions).catch(e => console.error(e));
+        } else {
+            // Sinon, le téléphone télécharge et adopte les données du cloud
+            exceptions = remoteData;
+            localStorage.setItem('gabriel_exceptions', JSON.stringify(exceptions));
+            renderAll();
+            const lbl = document.getElementById('sync-lbl');
+            if(lbl) lbl.textContent = 'Synchronisé Cloud ⚡';
+        }
+    } else {
+        // Lors du tout premier lancement, on initialise la base avec les données actuelles
+        setDoc(docRef, exceptions).catch(e => console.error(e));
+    }
+});
+
+const saveEx=()=> {
+    localStorage.setItem('gabriel_exceptions',JSON.stringify(exceptions));
+    setDoc(docRef, exceptions).catch(e => console.error("Erreur Firebase:", e));
+};
 
 const d2s=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 const s2d=s=>{const[y,m,j]=s.split('-').map(Number);return new Date(y,m-1,j,12,0,0)};
@@ -255,7 +297,6 @@ function getCustody(date){
     const yr=date.getFullYear();
     const dow=date.getDay(); 
 
-    // On détecte si c'est une fête religieuse pour l'affichage visuel
     let isRel = !!relHols[ds];
     let relText = isRel ? ` (+ ${relHols[ds]})` : "";
 
@@ -270,19 +311,16 @@ function getCustody(date){
     const t=date.getTime();
     for(const h of schoolHols){
         const startH = s2d(h.s);
-        // Les vacances incluent le vendredi soir post-école
         const firstNight = new Date(startH);
         firstNight.setDate(firstNight.getDate() - 1); 
         
         const endH = s2d(h.e); 
-        // fin de boucle si on est hors période
         if(t < firstNight.getTime() || t > endH.getTime()) continue;
         
         const startYear=parseInt(h.s.split('-')[0]);
         const isEvenYear=(startYear%2===0);
 
         if(h.summer){
-            // Grandes vacances : blocs de 14 jours stricts, calés sur les samedis à midi
             const sat2 = new Date(startH); sat2.setDate(sat2.getDate() + 14);
             const sat3 = new Date(startH); sat3.setDate(sat3.getDate() + 28);
             const sat4 = new Date(startH); sat4.setDate(sat4.getDate() + 42);
@@ -300,16 +338,13 @@ function getCustody(date){
             return {who: papaHas ? "Papa" : "Maman", why: `Été (${blockNames[block]})${relText}`, rel: isRel};
             
         } else {
-            // Petites vacances
             const midH = s2d(h.mid);
-            // si t < midH (samedi), ça couvre jusqu'à la nuit du vendredi au samedi incluse.
             const isFirst = (t < midH.getTime());
             const papaHas = isEvenYear ? !isFirst : isFirst;
             return {who: papaHas ? "Papa" : "Maman", why: `Vacances ${h.n} (${isFirst ? '1ère' : '2ème'} moitié)${relText}`, rel: isRel};
         }
     }
 
-    // Fêtes religieuses HORS vacances scolaires
     if(isRel) {
         const relParent = (yr % 2 === 0) ? "Papa" : "Maman";
         return{who: relParent, why:`${relHols[ds]} (${relParent})`, rel: true};
@@ -410,7 +445,7 @@ function renderYear(){
             if(c.forced)cls+=' exc';
             if(c.rel)cls+=' rel';
             if(c.ferie)cls+=' fer';
-            html+=`<div class="${cls}">${d}</div>`;
+            html+=`<div class="${cls}" onclick="toggleDay('${ds}')">${d}</div>`;
         }
         html+=`</div></div>`;g.innerHTML+=html;
     }
@@ -518,6 +553,17 @@ async function syncHebcal(){
         }
     }catch(e){document.getElementById('sync-lbl').textContent='Hors-ligne'}
 }
+
+// Exposition des fonctions pour qu'elles soient lisibles par les boutons HTML
+window.forceToday = forceToday;
+window.chMonth = chMonth;
+window.goToday = goToday;
+window.chYear = chYear;
+window.goYear = goYear;
+window.toggleDay = toggleDay;
+window.stTab = stTab;
+window.exportICS = exportICS;
+window.sw = sw;
 
 renderAll();setTimeout(syncHebcal,2000);
 </script>
