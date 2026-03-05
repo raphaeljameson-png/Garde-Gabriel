@@ -4,9 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Garde Gabriel</title>
-    <link rel="manifest" href="manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon.png">
     <style>
         :root {
             --app-bg:#f2f2f7; --text:#000; --muted:#8e8e93; --card:#fff;
@@ -166,12 +167,12 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebas
 import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 /* ═══════════════════════════════════════════════════════
-   GARDE GABRIEL — CLOUD SYNC
+   GARDE GABRIEL — CLOUD SYNC + RÈGLES FÉRIÉS STRICTES
    ═══════════════════════════════════════════════════════ */
 
-if(localStorage.getItem('app_version')!=='v15'){
+if(localStorage.getItem('app_version')!=='v16'){
     ['gabriel_school_holidays','gabriel_religious_holidays','gabriel_last_sync'].forEach(k=>localStorage.removeItem(k));
-    localStorage.setItem('app_version','v15');
+    localStorage.setItem('app_version','v16');
 }
 
 let exceptions=JSON.parse(localStorage.getItem('gabriel_exceptions')||'{}');
@@ -194,11 +195,9 @@ const docRef = doc(db, "garde", "exceptions");
 onSnapshot(docRef, (snap) => {
     if (snap.exists()) {
         const remoteData = snap.data();
-        // Sécurité : si la base en ligne est vide mais que le téléphone a des données, on les envoie
         if (Object.keys(remoteData).length === 0 && Object.keys(exceptions).length > 0) {
             setDoc(docRef, exceptions).catch(e => console.error(e));
         } else {
-            // Sinon, le téléphone télécharge et adopte les données du cloud
             exceptions = remoteData;
             localStorage.setItem('gabriel_exceptions', JSON.stringify(exceptions));
             renderAll();
@@ -206,7 +205,6 @@ onSnapshot(docRef, (snap) => {
             if(lbl) lbl.textContent = 'Synchronisé Cloud ⚡';
         }
     } else {
-        // Lors du tout premier lancement, on initialise la base avec les données actuelles
         setDoc(docRef, exceptions).catch(e => console.error(e));
     }
 });
@@ -351,23 +349,34 @@ function getCustody(date){
         return{who: relParent, why:`${relHols[ds]} (${relParent})`, rel: true};
     }
 
-    const ph=getPH(yr);
-    const weekNo=isoWeek(date);
-    const isEvenWk=(weekNo%2===0);
+    const ph = getPH(yr);
+    const weekNo = isoWeek(date);
+    const isEvenWk = (weekNo % 2 === 0);
+    const yesterday = new Date(date); yesterday.setDate(date.getDate() - 1);
+    const yesterdayDS = d2s(yesterday);
     const tomorrow = new Date(date); tomorrow.setDate(date.getDate() + 1);
     const tomorrowDS = d2s(tomorrow);
 
-    if(dow===1 && isEvenWk && ph.has(ds)) {
-        return {who:"Papa", why:`Férié le lundi (prolonge le week-end)${relText}`, ferie:true, rel: isRel};
+    /* ── JOURS FÉRIÉS ET PONTS ── */
+    // 1. Lundi férié -> Appartient au parent du week-end précédent
+    if(dow===1 && ph.has(ds)) {
+        const who = isEvenWk ? "Maman" : "Papa";
+        return {who: who, why: `Lundi férié (prolonge le week-end)${relText}`, ferie:true, rel: isRel};
     }
-    if(dow===4 && !isEvenWk && ph.has(ds)) {
-        return {who:"Papa", why:`Férié le jeudi (prolonge le mercredi)${relText}`, ferie:true, rel: isRel};
+    // 2. Vendredi férié -> Appartient au parent du week-end en cours
+    if(dow===5 && ph.has(ds)) {
+        const who = isEvenWk ? "Papa" : "Maman";
+        return {who: who, why: `Vendredi férié (anticipe le week-end)${relText}`, ferie:true, rel: isRel};
     }
-    if(dow===4 && isEvenWk && ph.has(tomorrowDS)) {
-        return {who:"Papa", why:`Férié le vendredi (anticipe le week-end)${relText}`, ferie:true, rel: isRel};
+    // 3. Jeudi férié (Ascension) -> Appartient au parent du week-end en cours
+    if(dow===4 && ph.has(ds)) {
+        const who = isEvenWk ? "Papa" : "Maman";
+        return {who: who, why: `Jeudi férié (pont avec le week-end)${relText}`, ferie:true, rel: isRel};
     }
-    if(dow===2 && !isEvenWk && ph.has(tomorrowDS)) {
-        return {who:"Papa", why:`Férié le mercredi (anticipe le mercredi)${relText}`, ferie:true, rel: isRel};
+    // 4. Vendredi de pont (lendemain d'un jeudi férié) -> Appartient au parent du week-end en cours
+    if(dow===5 && ph.has(yesterdayDS)) {
+        const who = isEvenWk ? "Papa" : "Maman";
+        return {who: who, why: `Pont du vendredi${relText}`, ferie:true, rel: isRel};
     }
 
     /* ── ROULEMENT NORMAL ── */
@@ -555,7 +564,6 @@ async function syncHebcal(){
     }catch(e){document.getElementById('sync-lbl').textContent='Hors-ligne'}
 }
 
-// Exposition des fonctions pour qu'elles soient lisibles par les boutons HTML
 window.forceToday = forceToday;
 window.chMonth = chMonth;
 window.goToday = goToday;
