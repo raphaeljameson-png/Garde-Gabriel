@@ -79,11 +79,21 @@
         .dp{background:var(--papa)} .dm{background:var(--maman)}
         .dist-lbl{display:flex;justify-content:space-between;font-size:13px;font-weight:600}
         .sync-info{text-align:center;font-size:11px;color:var(--muted);margin-top:16px}
+        
+        /* Spécial Impression */
+        .print-header { display: none; text-align: center; font-size: 24px; font-weight: bold; margin-bottom: 20px; }
         @media print {
-            .tabbar,.btn,.seg-ctrl,.cal-nav,h1,.version-tag,.sync-info{display:none!important}
-            body,.app{background:white!important;box-shadow:none!important;padding:0!important}
-            .view{display:none!important;padding:0!important} .view.on{display:block!important}
-            .card{border:1px solid #ccc;box-shadow:none;break-inside:avoid}
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            .tabbar, .btn, .seg-ctrl, .cal-nav button, h1, .version-tag, .sync-info, .hero { display: none !important; }
+            body, .app { background: white !important; box-shadow: none !important; padding: 0 !important; color: black !important; }
+            .view { display: none !important; padding: 0 !important; } 
+            .view.on { display: block !important; }
+            .card { border: none !important; box-shadow: none !important; margin: 0 !important; padding: 0 !important; break-inside: avoid; }
+            /* Impression Année : 3 colonnes pour A4 Portrait */
+            #v-year.on .print-header { display: block !important; }
+            #v-year.on .cal-nav h2 { display: none !important; }
+            #v-year.on .yr-grid { grid-template-columns: repeat(3, 1fr) !important; gap: 15px !important; }
+            .md { border: 1px solid #f2f2f7; }
         }
     </style>
 </head>
@@ -113,7 +123,7 @@
         </div>
         <div class="btn-row">
             <button class="btn btn-outline" onclick="goToday()">Ce mois-ci</button>
-            <button class="btn btn-outline" onclick="window.print()">Imprimer</button>
+            <button class="btn btn-outline" onclick="window.print()">Imprimer le mois</button>
         </div>
         <div class="legend">
             <span class="leg"><span class="ldot" style="background:var(--papa)"></span>Papa</span>
@@ -125,6 +135,7 @@
     </div>
     <div id="v-year" class="view">
         <h1>Année</h1>
+        <div class="print-header" id="print-yr-header">Calendrier de garde de Gabriel</div>
         <div class="card" style="padding:13px 14px">
             <div class="cal-nav" style="margin-bottom:0">
                 <button class="nav-btn" onclick="chYear(-1)">❮</button>
@@ -139,7 +150,10 @@
             <span class="leg"><span class="ldot" style="background:var(--exception)"></span>Modifié</span>
             <span class="leg"><span class="ldot" style="border:2px solid var(--religious);background:transparent"></span>Fête juive</span>
         </div>
-        <button class="btn btn-outline" style="margin-top:8px" onclick="goYear()">Année en cours</button>
+        <div class="btn-row">
+            <button class="btn btn-outline" onclick="goYear()">Année en cours</button>
+            <button class="btn btn-outline" onclick="window.print()">Imprimer l'année</button>
+        </div>
     </div>
     <div id="v-stats" class="view">
         <h1>Statistiques</h1>
@@ -358,22 +372,18 @@ function getCustody(date){
     const tomorrowDS = d2s(tomorrow);
 
     /* ── JOURS FÉRIÉS ET PONTS ── */
-    // 1. Lundi férié -> Appartient au parent du week-end précédent
     if(dow===1 && ph.has(ds)) {
         const who = isEvenWk ? "Maman" : "Papa";
         return {who: who, why: `Lundi férié (prolonge le week-end)${relText}`, ferie:true, rel: isRel};
     }
-    // 2. Vendredi férié -> Appartient au parent du week-end en cours
     if(dow===5 && ph.has(ds)) {
         const who = isEvenWk ? "Papa" : "Maman";
         return {who: who, why: `Vendredi férié (anticipe le week-end)${relText}`, ferie:true, rel: isRel};
     }
-    // 3. Jeudi férié (Ascension) -> Appartient au parent du week-end en cours
     if(dow===4 && ph.has(ds)) {
         const who = isEvenWk ? "Papa" : "Maman";
         return {who: who, why: `Jeudi férié (pont avec le week-end)${relText}`, ferie:true, rel: isRel};
     }
-    // 4. Vendredi de pont (lendemain d'un jeudi férié) -> Appartient au parent du week-end en cours
     if(dow===5 && ph.has(yesterdayDS)) {
         const who = isEvenWk ? "Papa" : "Maman";
         return {who: who, why: `Pont du vendredi${relText}`, ferie:true, rel: isRel};
@@ -439,6 +449,8 @@ const goYear=()=>{yrView=new Date().getFullYear();renderYear()};
 
 function renderYear(){
     document.getElementById('yr-title').textContent=yrView;
+    document.getElementById('print-yr-header').textContent='Calendrier de garde de Gabriel - Année ' + yrView;
+    
     const g=document.getElementById('yr-grid');g.innerHTML='';
     const MONTHS=['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Août','Sep','Oct','Nov','Déc'];
     const todayS=d2s(new Date());
