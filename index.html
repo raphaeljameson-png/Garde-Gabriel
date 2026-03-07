@@ -102,13 +102,13 @@
 <div class="app">
     <div id="v-today" class="view on">
         <h1>Aujourd'hui</h1>
-        <div class="version-tag">v2.1 — Vacances soulignées (05/03/2026)</div>
+        <div class="version-tag">v2.2 — Mode Lecture Seule (07/03/2026)</div>
         <div class="hero">
             <div class="hero-date" id="t-date"></div>
             <div class="circle" id="t-circle"></div>
             <div class="hero-reason" id="t-reason"></div>
         </div>
-        <button class="btn btn-outline" onclick="forceToday()">Forcer un changement exceptionnel</button>
+        <button id="btn-force" class="btn btn-outline" onclick="forceToday()">Forcer un changement exceptionnel</button>
         <h2 style="margin-top:22px">À venir</h2>
         <div class="card" id="upcoming"></div>
     </div>
@@ -184,12 +184,26 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebas
 import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 /* ═══════════════════════════════════════════════════════
-   GARDE GABRIEL — CLOUD SYNC + RÈGLES FÉRIÉS STRICTES + VACANCES
+   GARDE GABRIEL — SÉCURITÉ ADMIN + LECTURE SEULE
    ═══════════════════════════════════════════════════════ */
 
-if(localStorage.getItem('app_version')!=='v17'){
+// --- GESTION DES DROITS (LIEN MAGIQUE) ---
+const urlParams = new URLSearchParams(window.location.search);
+if(urlParams.get('mode') === 'papa') {
+    localStorage.setItem('gabriel_admin', 'true');
+    // Nettoie l'URL pour cacher le mot de passe
+    window.history.replaceState({}, document.title, window.location.pathname);
+}
+const isAdmin = localStorage.getItem('gabriel_admin') === 'true';
+
+// Cache le bouton forcer si pas admin
+if(!isAdmin) {
+    document.getElementById('btn-force').style.display = 'none';
+}
+
+if(localStorage.getItem('app_version')!=='v18'){
     ['gabriel_school_holidays','gabriel_religious_holidays','gabriel_last_sync'].forEach(k=>localStorage.removeItem(k));
-    localStorage.setItem('app_version','v17');
+    localStorage.setItem('app_version','v18');
 }
 
 let exceptions=JSON.parse(localStorage.getItem('gabriel_exceptions')||'{}');
@@ -212,7 +226,7 @@ const docRef = doc(db, "garde", "exceptions");
 onSnapshot(docRef, (snap) => {
     if (snap.exists()) {
         const remoteData = snap.data();
-        if (Object.keys(remoteData).length === 0 && Object.keys(exceptions).length > 0) {
+        if (Object.keys(remoteData).length === 0 && Object.keys(exceptions).length > 0 && isAdmin) {
             setDoc(docRef, exceptions).catch(e => console.error(e));
         } else {
             exceptions = remoteData;
@@ -221,12 +235,13 @@ onSnapshot(docRef, (snap) => {
             const lbl = document.getElementById('sync-lbl');
             if(lbl) lbl.textContent = 'Synchronisé Cloud ⚡';
         }
-    } else {
+    } else if (isAdmin) {
         setDoc(docRef, exceptions).catch(e => console.error(e));
     }
 });
 
 const saveEx=()=> {
+    if(!isAdmin) return;
     localStorage.setItem('gabriel_exceptions',JSON.stringify(exceptions));
     setDoc(docRef, exceptions).catch(e => console.error("Erreur Firebase:", e));
 };
@@ -490,6 +505,10 @@ function renderYear(){
 }
 
 function toggleDay(ds){
+    if(!isAdmin) {
+        alert("Mode lecture seule : Vous consultez le calendrier de Gabriel.");
+        return;
+    }
     if(exceptions[ds]){
         if(confirm(`Annuler l'exception du ${ds} et revenir au calcul normal ?`)){delete exceptions[ds];saveEx();renderAll();return}
     }
