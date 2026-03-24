@@ -102,7 +102,7 @@
 <div class="app">
     <div id="v-today" class="view on">
         <h1>Aujourd'hui</h1>
-        <div class="version-tag">v2.2 — Mode Lecture Seule (07/03/2026)</div>
+        <div class="version-tag">v2.3 — Fêtes juives (Veilles incluses)</div>
         <div class="hero">
             <div class="hero-date" id="t-date"></div>
             <div class="circle" id="t-circle"></div>
@@ -184,26 +184,24 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebas
 import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 /* ═══════════════════════════════════════════════════════
-   GARDE GABRIEL — SÉCURITÉ ADMIN + LECTURE SEULE
+   GARDE GABRIEL — SÉCURITÉ ADMIN + VEILLES DE FÊTES
    ═══════════════════════════════════════════════════════ */
 
 // --- GESTION DES DROITS (LIEN MAGIQUE) ---
 const urlParams = new URLSearchParams(window.location.search);
 if(urlParams.get('mode') === 'papa') {
     localStorage.setItem('gabriel_admin', 'true');
-    // Nettoie l'URL pour cacher le mot de passe
     window.history.replaceState({}, document.title, window.location.pathname);
 }
 const isAdmin = localStorage.getItem('gabriel_admin') === 'true';
 
-// Cache le bouton forcer si pas admin
 if(!isAdmin) {
     document.getElementById('btn-force').style.display = 'none';
 }
 
-if(localStorage.getItem('app_version')!=='v18'){
+if(localStorage.getItem('app_version')!=='v19'){
     ['gabriel_school_holidays','gabriel_religious_holidays','gabriel_last_sync'].forEach(k=>localStorage.removeItem(k));
-    localStorage.setItem('app_version','v18');
+    localStorage.setItem('app_version','v19');
 }
 
 let exceptions=JSON.parse(localStorage.getItem('gabriel_exceptions')||'{}');
@@ -222,7 +220,6 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const docRef = doc(db, "garde", "exceptions");
 
-// --- SYNCHRONISATION EN TEMPS RÉEL ---
 onSnapshot(docRef, (snap) => {
     if (snap.exists()) {
         const remoteData = snap.data();
@@ -283,17 +280,18 @@ let schoolHols=JSON.parse(localStorage.getItem('gabriel_school_holidays')||'null
     {n:"Été",s:"2030-07-06",e:"2030-08-31",summer:true}
 ];
 
-/* ── FÊTES JUIVES (base, enrichie via HebCal) ── */
+/* ── FÊTES JUIVES DURES (Avec veilles) ── */
 let relHols=JSON.parse(localStorage.getItem('gabriel_religious_holidays')||'null')||{
-    "2024-10-03":"Roch Hachana","2024-10-04":"Roch Hachana (J2)","2024-10-12":"Kippour","2024-10-24":"Shmini 'Atsérêt",
-    "2024-12-26":"Hanouka (1er jour)","2025-01-02":"Hanouka (Dernier jour)",
-    "2025-03-14":"Pourim","2025-04-13":"Pessah (J1)","2025-04-14":"Pessah (J2)",
-    "2025-09-23":"Roch Hachana","2025-09-24":"Roch Hachana (J2)","2025-10-02":"Kippour","2025-10-14":"Shmini 'Atsérêt",
+    "2025-04-12":"Veille de Pessah (Seder)","2025-04-13":"Pessah (J1)","2025-04-14":"Pessah (J2)",
+    "2025-09-22":"Veille de Roch Hachana","2025-09-23":"Roch Hachana","2025-09-24":"Roch Hachana (J2)",
+    "2025-10-01":"Veille de Kippour (Kol Nidré)","2025-10-02":"Kippour",
+    "2026-04-01":"Veille de Pessah (Seder)","2026-04-02":"Pessah (J1)","2026-04-03":"Pessah (J2)",
+    "2026-09-11":"Veille de Roch Hachana","2026-09-12":"Roch Hachana","2026-09-13":"Roch Hachana (J2)",
+    "2026-09-20":"Veille de Kippour (Kol Nidré)","2026-09-21":"Kippour",
     "2025-12-15":"Hanouka (1er jour)","2025-12-22":"Hanouka (Dernier jour)",
-    "2026-03-03":"Pourim","2026-04-02":"Pessah (J1)","2026-04-03":"Pessah (J2)","2026-10-03":"Shmini 'Atsérêt"
+    "2026-03-03":"Pourim","2026-10-03":"Shmini 'Atsérêt"
 };
 
-/* ── FÊTE DES MÈRES ── */
 function getMothersDay(yr){
     let fdm=new Date(yr,4,31,12,0,0);
     while(fdm.getDay()!==0) fdm.setDate(fdm.getDate()-1);
@@ -304,7 +302,6 @@ function getMothersDay(yr){
     return d2s(fdm);
 }
 
-/* ── JOURS FÉRIÉS ── */
 function getPH(year){
     const a=year%19,b=Math.floor(year/100),c=year%100,d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451),mo=Math.floor((h+l-7*m+114)/31),da=((h+l-7*m+114)%31)+1;
     const easter=new Date(year,mo-1,da,12,0,0);
@@ -320,9 +317,6 @@ function isoWeek(date){
     return Math.ceil((((tmp-yearStart)/86400000)+1)/7);
 }
 
-/* ══════════════════════════════════════════
-   ALGORITHME PRINCIPAL
-   ══════════════════════════════════════════ */
 function getCustody(date){
     const ds=d2s(date);
     const yr=date.getFullYear();
@@ -332,7 +326,6 @@ function getCustody(date){
     let isRel = !!relHols[ds];
     let relText = isRel ? ` (+ ${relHols[ds]})` : "";
 
-    // ── Détection Globale des Vacances Scolaires (pour le soulignement) ──
     let isVac = false;
     for(const h of schoolHols){
         const startH = s2d(h.s);
@@ -351,7 +344,6 @@ function getCustody(date){
     while(sc<3){if(fdp.getDay()===0)sc++;if(sc<3)fdp.setDate(fdp.getDate()+1)}
     if(ds===d2s(fdp)) return{who:"Papa",why:"Fête des Pères 👔" + relText, rel: isRel, vac: isVac};
 
-    /* ── LOGIQUE DES VACANCES SCOLAIRES ── */
     for(const h of schoolHols){
         const startH = s2d(h.s);
         const firstNight = new Date(startH);
@@ -397,10 +389,7 @@ function getCustody(date){
     const isEvenWk = (weekNo % 2 === 0);
     const yesterday = new Date(date); yesterday.setDate(date.getDate() - 1);
     const yesterdayDS = d2s(yesterday);
-    const tomorrow = new Date(date); tomorrow.setDate(date.getDate() + 1);
-    const tomorrowDS = d2s(tomorrow);
 
-    /* ── JOURS FÉRIÉS ET PONTS ── */
     if(dow===1 && ph.has(ds)) {
         const who = isEvenWk ? "Maman" : "Papa";
         return {who: who, why: `Lundi férié (prolonge le week-end)${relText}`, ferie:true, rel: isRel, vac: isVac};
@@ -418,7 +407,6 @@ function getCustody(date){
         return {who: who, why: `Pont du vendredi${relText}`, ferie:true, rel: isRel, vac: isVac};
     }
 
-    /* ── ROULEMENT NORMAL ── */
     if(isEvenWk && (dow===5||dow===6||dow===0)){
         return{who:"Papa",why:`S${weekNo} (paire) — Week-end Papa${relText}`, rel: isRel, vac: isVac};
     }
@@ -429,7 +417,6 @@ function getCustody(date){
     return{who:"Maman",why:`Résidence habituelle${relText}`, rel: isRel, vac: isVac};
 }
 
-/* ══ RENDU ══ */
 function renderToday(){
     const now=new Date();const c=getCustody(now);
     document.getElementById('t-date').textContent=now.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
@@ -593,14 +580,30 @@ async function syncHebcal(){
             if(!data.items)continue;
             data.items.forEach(item=>{
                 const orig=item.title_orig||item.title||'';const ds=item.date;if(!ds)return;
-                if(orig.includes('Rosh Hashana'))newRel[ds]=orig.includes('II')?'Roch Hachana (J2)':'Roch Hachana';
-                if(orig==='Yom Kippur')newRel[ds]='Kippour';
-                if(orig==='Pourim')newRel[ds]='Pourim';
-                if(orig==='Pesach I')newRel[ds]='Pessah (J1)';
-                if(orig==='Pesach II')newRel[ds]='Pessah (J2)';
-                if(orig==='Shmini Atzeret')newRel[ds]="Shmini 'Atsérêt";
+                
+                if(orig.includes('Rosh Hashana')) {
+                    const name = orig.includes('II') ? 'Roch Hachana (J2)' : 'Roch Hachana';
+                    newRel[ds] = name;
+                    if(name === 'Roch Hachana') {
+                        const d1=s2d(ds); d1.setDate(d1.getDate()-1);
+                        newRel[d2s(d1)] = 'Veille de Roch Hachana';
+                    }
+                }
+                if(orig==='Yom Kippur') {
+                    newRel[ds]='Kippour';
+                    const d1=s2d(ds); d1.setDate(d1.getDate()-1);
+                    newRel[d2s(d1)]='Veille de Kippour (Kol Nidré)';
+                }
+                if(orig==='Pourim') newRel[ds]='Pourim';
+                if(orig==='Pesach I') {
+                    newRel[ds]='Pessah (J1)';
+                    const d1=s2d(ds); d1.setDate(d1.getDate()-1);
+                    newRel[d2s(d1)]='Veille de Pessah (Seder)';
+                }
+                if(orig==='Pesach II') newRel[ds]='Pessah (J2)';
+                if(orig==='Shmini Atzeret') newRel[ds]="Shmini 'Atsérêt";
                 if(orig==='Chanukah: 1 Candle'){const d1=s2d(ds);d1.setDate(d1.getDate()+1);newRel[d2s(d1)]='Hanouka (1er jour)'}
-                if(orig==='Chanukah: 8th Day')newRel[ds]='Hanouka (Dernier jour)';
+                if(orig==='Chanukah: 8th Day') newRel[ds]='Hanouka (Dernier jour)';
             });
         }
         if(Object.keys(newRel).length>5){
