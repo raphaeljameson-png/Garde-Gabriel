@@ -102,7 +102,7 @@
 <div class="app">
     <div id="v-today" class="view on">
         <h1>Aujourd'hui</h1>
-        <div class="version-tag">v2.3 — Fêtes juives (Veilles incluses)</div>
+        <div class="version-tag">v2.4 — Ajustement Pessah (2 soirs)</div>
         <div class="hero">
             <div class="hero-date" id="t-date"></div>
             <div class="circle" id="t-circle"></div>
@@ -199,9 +199,9 @@ if(!isAdmin) {
     document.getElementById('btn-force').style.display = 'none';
 }
 
-if(localStorage.getItem('app_version')!=='v19'){
+if(localStorage.getItem('app_version')!=='v20'){
     ['gabriel_school_holidays','gabriel_religious_holidays','gabriel_last_sync'].forEach(k=>localStorage.removeItem(k));
-    localStorage.setItem('app_version','v19');
+    localStorage.setItem('app_version','v20');
 }
 
 let exceptions=JSON.parse(localStorage.getItem('gabriel_exceptions')||'{}');
@@ -280,12 +280,12 @@ let schoolHols=JSON.parse(localStorage.getItem('gabriel_school_holidays')||'null
     {n:"Été",s:"2030-07-06",e:"2030-08-31",summer:true}
 ];
 
-/* ── FÊTES JUIVES DURES (Avec veilles) ── */
+/* ── FÊTES JUIVES DURES (Sans Pessah J2 selon le jugement) ── */
 let relHols=JSON.parse(localStorage.getItem('gabriel_religious_holidays')||'null')||{
-    "2025-04-12":"Veille de Pessah (Seder)","2025-04-13":"Pessah (J1)","2025-04-14":"Pessah (J2)",
+    "2025-04-12":"Veille de Pessah (Seder)","2025-04-13":"Pessah (J1)",
     "2025-09-22":"Veille de Roch Hachana","2025-09-23":"Roch Hachana","2025-09-24":"Roch Hachana (J2)",
     "2025-10-01":"Veille de Kippour (Kol Nidré)","2025-10-02":"Kippour",
-    "2026-04-01":"Veille de Pessah (Seder)","2026-04-02":"Pessah (J1)","2026-04-03":"Pessah (J2)",
+    "2026-04-01":"Veille de Pessah (Seder)","2026-04-02":"Pessah (J1)",
     "2026-09-11":"Veille de Roch Hachana","2026-09-12":"Roch Hachana","2026-09-13":"Roch Hachana (J2)",
     "2026-09-20":"Veille de Kippour (Kol Nidré)","2026-09-21":"Kippour",
     "2025-12-15":"Hanouka (1er jour)","2025-12-22":"Hanouka (Dernier jour)",
@@ -600,7 +600,7 @@ async function syncHebcal(){
                     const d1=s2d(ds); d1.setDate(d1.getDate()-1);
                     newRel[d2s(d1)]='Veille de Pessah (Seder)';
                 }
-                if(orig==='Pesach II') newRel[ds]='Pessah (J2)';
+                // (Pesach II retiré de la logique automatique selon le jugement)
                 if(orig==='Shmini Atzeret') newRel[ds]="Shmini 'Atsérêt";
                 if(orig==='Chanukah: 1 Candle'){const d1=s2d(ds);d1.setDate(d1.getDate()+1);newRel[d2s(d1)]='Hanouka (1er jour)'}
                 if(orig==='Chanukah: 8th Day') newRel[ds]='Hanouka (Dernier jour)';
