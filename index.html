@@ -103,7 +103,7 @@
 <div class="app">
     <div id="v-today" class="view on">
         <h1>Aujourd'hui</h1>
-        <div class="version-tag">v2.7 — Export Passages Directs</div>
+        <div class="version-tag">v2.8 — Export Passages Directs (Filtré)</div>
         <div class="hero">
             <div class="hero-date" id="t-date"></div>
             <div class="circle" id="t-circle"></div>
@@ -208,7 +208,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebas
 import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 /* ═══════════════════════════════════════════════════════
-   GARDE GABRIEL — V2.7 (SÉCURITÉ + VEILLES + EXPORTS MULTIPLES)
+   GARDE GABRIEL — V2.8 (SÉCURITÉ + VEILLES + EXPORTS MULTIPLES)
    ═══════════════════════════════════════════════════════ */
 
 // --- GESTION DES DROITS (LIEN MAGIQUE) ---
@@ -223,9 +223,9 @@ if(!isAdmin) {
     document.getElementById('btn-force').style.display = 'none';
 }
 
-if(localStorage.getItem('app_version')!=='v23'){
+if(localStorage.getItem('app_version')!=='v24'){
     ['gabriel_school_holidays','gabriel_religious_holidays','gabriel_last_sync'].forEach(k=>localStorage.removeItem(k));
-    localStorage.setItem('app_version','v23');
+    localStorage.setItem('app_version','v24');
 }
 
 let exceptions=JSON.parse(localStorage.getItem('gabriel_exceptions')||'{}');
@@ -642,6 +642,7 @@ function exportDirectJSON() {
         const ds = d2s(d);
         const c = getCustody(d);
         const weekNo = isoWeek(d);
+        const dow = d.getDay(); // 0 = Dimanche, 1 = Lundi, ..., 6 = Samedi
         
         const passageDeBras = (c.who !== parentVeille);
         const sensPassage = passageDeBras ? `${parentVeille} -> ${c.who}` : "Non";
@@ -649,8 +650,21 @@ function exportDirectJSON() {
         let relName = relHols[ds] || false;
         if(c.rel && !relName) relName = true;
 
-        // Condition de filtre : Passage de bras ET (Vacances OU Fête religieuse OU Exception manuelle)
-        if (passageDeBras && (!!c.vac || relName !== false || !!c.forced)) {
+        // --- NOUVELLE LOGIQUE DE FILTRAGE (PASSAGES DIRECTS) ---
+        // 1. Est-on pendant les grandes vacances (Juillet / Août) ?
+        const isSummer = d.getMonth() === 6 || d.getMonth() === 7;
+        
+        // 2. Est-ce le week-end ?
+        const isWeekend = dow === 0 || dow === 6;
+        
+        // 3. Est-ce un jour férié officiel ?
+        const isFerieReel = getPH(d.getFullYear()).has(ds) || !!c.ferie;
+
+        // Un échange est obligatoirement "sans école" (face-à-face) si l'une de ces conditions est vraie :
+        const sansEcole = isWeekend || isSummer || isFerieReel || relName !== false || !!c.forced;
+
+        // On exporte SI la garde change ET qu'il n'y a pas d'école pour faire le relais
+        if (passageDeBras && sansEcole) {
             donneesExport.push({
                 "Date": ds,
                 "Jour": d.toLocaleDateString('fr-FR', { weekday: 'long' }),
