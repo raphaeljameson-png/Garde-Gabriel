@@ -103,7 +103,7 @@
 <div class="app">
     <div id="v-today" class="view on">
         <h1>Aujourd'hui</h1>
-        <div class="version-tag">v2.6 — Export JSON + iCal</div>
+        <div class="version-tag">v2.7 — Export Passages Directs</div>
         <div class="hero">
             <div class="hero-date" id="t-date"></div>
             <div class="circle" id="t-circle"></div>
@@ -189,6 +189,7 @@
                 <button class="btn btn-solid" style="padding:10px; font-size:14px;" onclick="exportJSONData()">Base JSON</button>
                 <button class="btn btn-outline" style="padding:10px; font-size:14px;" onclick="exportICS()">iCal (.ics)</button>
             </div>
+            <button class="btn btn-outline" style="padding:10px; font-size:14px; margin-top:10px;" onclick="exportDirectJSON()">Export Passages Directs (JSON)</button>
         </div>
         
         <div class="sync-info">Données : <span id="sync-lbl">Initialisation…</span></div>
@@ -207,7 +208,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebas
 import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 /* ═══════════════════════════════════════════════════════
-   GARDE GABRIEL — V2.6 (SÉCURITÉ + VEILLES + EXPORT JSON/iCal)
+   GARDE GABRIEL — V2.7 (SÉCURITÉ + VEILLES + EXPORTS MULTIPLES)
    ═══════════════════════════════════════════════════════ */
 
 // --- GESTION DES DROITS (LIEN MAGIQUE) ---
@@ -222,9 +223,9 @@ if(!isAdmin) {
     document.getElementById('btn-force').style.display = 'none';
 }
 
-if(localStorage.getItem('app_version')!=='v22'){
+if(localStorage.getItem('app_version')!=='v23'){
     ['gabriel_school_holidays','gabriel_religious_holidays','gabriel_last_sync'].forEach(k=>localStorage.removeItem(k));
-    localStorage.setItem('app_version','v22');
+    localStorage.setItem('app_version','v23');
 }
 
 let exceptions=JSON.parse(localStorage.getItem('gabriel_exceptions')||'{}');
@@ -564,7 +565,7 @@ function renderStats(){
     }).join('');
 }
 
-// Fonction d'export de la base de données JSON
+// Fonction d'export global de la base de données JSON
 function exportJSONData() {
     const startInput = document.getElementById('exp-start').value;
     const endInput = document.getElementById('exp-end').value;
@@ -614,6 +615,64 @@ function exportJSONData() {
     const a = document.createElement('a');
     a.href = dataStr;
     a.download = `Export_Gabriel_${startInput}_au_${endInput}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+}
+
+// Fonction d'export JSON filtré (Passages Directs uniquement)
+function exportDirectJSON() {
+    const startInput = document.getElementById('exp-start').value;
+    const endInput = document.getElementById('exp-end').value;
+    
+    if(!startInput || !endInput) return alert("Veuillez sélectionner les dates de début et de fin.");
+    
+    const start = new Date(startInput + 'T12:00:00');
+    const end = new Date(endInput + 'T12:00:00');
+    
+    if(start > end) return alert("La date de fin doit être postérieure à la date de début.");
+
+    const donneesExport = [];
+    
+    let veille = new Date(start);
+    veille.setDate(veille.getDate() - 1);
+    let parentVeille = getCustody(veille).who;
+
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+        const ds = d2s(d);
+        const c = getCustody(d);
+        const weekNo = isoWeek(d);
+        
+        const passageDeBras = (c.who !== parentVeille);
+        const sensPassage = passageDeBras ? `${parentVeille} -> ${c.who}` : "Non";
+        
+        let relName = relHols[ds] || false;
+        if(c.rel && !relName) relName = true;
+
+        // Condition de filtre : Passage de bras ET (Vacances OU Fête religieuse OU Exception manuelle)
+        if (passageDeBras && (!!c.vac || relName !== false || !!c.forced)) {
+            donneesExport.push({
+                "Date": ds,
+                "Jour": d.toLocaleDateString('fr-FR', { weekday: 'long' }),
+                "Semaine": weekNo % 2 === 0 ? "Paire" : "Impaire",
+                "Garde": c.who,
+                "Passage_de_bras": passageDeBras,
+                "Sens_passage": sensPassage,
+                "Raison": c.why.replace(/ \(\+.*?\)/, ''), 
+                "Vacances_scolaires": !!c.vac,
+                "Ferie": !!c.ferie,
+                "Fete_religieuse": relName,
+                "Exception_manuelle": !!c.forced
+            });
+        }
+
+        parentVeille = c.who; 
+    }
+
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(donneesExport, null, 2));
+    const a = document.createElement('a');
+    a.href = dataStr;
+    a.download = `Passages_Directs_Gabriel.json`;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -712,6 +771,7 @@ window.goYear = goYear;
 window.toggleDay = toggleDay;
 window.stTab = stTab;
 window.exportJSONData = exportJSONData;
+window.exportDirectJSON = exportDirectJSON;
 window.exportICS = exportICS;
 window.sw = sw;
 
