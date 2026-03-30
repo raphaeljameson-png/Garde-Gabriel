@@ -1,8 +1,20 @@
 {
-  "name": "Garde Gabriel",
+  "name": "Calendrier Garde Gabriel",
   "short_name": "Gabriel",
-  "start_url": "./index.html",
+  "start_url": "./",
   "display": "standalone",
-  "background_color": "#e5e5ea",
-  "theme_color": "#007AFF"
+  "background_color": "#f2f2f7",
+  "theme_color": "#f2f2f7",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
 }
