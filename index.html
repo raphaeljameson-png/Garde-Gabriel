@@ -81,12 +81,13 @@
         .dp{background:var(--papa)} .dm{background:var(--maman)}
         .dist-lbl{display:flex;justify-content:space-between;font-size:13px;font-weight:600}
         .sync-info{text-align:center;font-size:11px;color:var(--muted);margin-top:16px}
+        .exp-input { width:100%; padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--app-bg); color:var(--text); margin-top: 4px;}
         
         /* Spécial Impression */
         .print-header { display: none; text-align: center; font-size: 24px; font-weight: bold; margin-bottom: 20px; }
         @media print {
             * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-            .tabbar, .btn, .seg-ctrl, .cal-nav button, h1, .version-tag, .sync-info, .hero { display: none !important; }
+            .tabbar, .btn, .seg-ctrl, .cal-nav button, h1, .version-tag, .sync-info, .hero, .export-section { display: none !important; }
             body, .app { background: white !important; box-shadow: none !important; padding: 0 !important; color: black !important; }
             .view { display: none !important; padding: 0 !important; } 
             .view.on { display: block !important; }
@@ -102,7 +103,7 @@
 <div class="app">
     <div id="v-today" class="view on">
         <h1>Aujourd'hui</h1>
-        <div class="version-tag">v2.4 — Ajustement Pessah (2 soirs)</div>
+        <div class="version-tag">v2.5 — Export JSON Data</div>
         <div class="hero">
             <div class="hero-date" id="t-date"></div>
             <div class="circle" id="t-circle"></div>
@@ -112,6 +113,7 @@
         <h2 style="margin-top:22px">À venir</h2>
         <div class="card" id="upcoming"></div>
     </div>
+    
     <div id="v-calendar" class="view">
         <h1>Mois</h1>
         <div class="card" style="padding:14px 10px">
@@ -135,6 +137,7 @@
             <span class="leg"><span style="text-decoration:underline;text-underline-offset:2px">Vacances</span></span>
         </div>
     </div>
+    
     <div id="v-year" class="view">
         <h1>Année</h1>
         <div class="print-header" id="print-yr-header">Calendrier de garde de Gabriel</div>
@@ -158,6 +161,7 @@
             <button class="btn btn-outline" onclick="window.print()">Imprimer l'année</button>
         </div>
     </div>
+    
     <div id="v-stats" class="view">
         <h1>Statistiques</h1>
         <div class="seg-ctrl">
@@ -168,9 +172,25 @@
         <div id="sv-m"><div class="card" id="sl-m"></div></div>
         <div id="sv-y" style="display:none"><div class="card" id="sl-y"></div></div>
         <div id="sv-g" style="display:none"><div id="sl-g"></div></div>
-        <button class="btn btn-solid" style="margin-top:16px" onclick="exportICS()">Exporter iCal (.ics)</button>
+        
+        <div class="card export-section" style="padding:16px; margin-top:20px;">
+            <h3 style="margin-top:0; font-size:15px;">Exporter l'historique (JSON)</h3>
+            <div style="display:flex; gap:10px; margin-bottom:12px;">
+                <div style="flex:1">
+                    <label style="font-size:11px; color:var(--muted); font-weight:600">DE</label>
+                    <input type="date" id="exp-start" class="exp-input">
+                </div>
+                <div style="flex:1">
+                    <label style="font-size:11px; color:var(--muted); font-weight:600">À</label>
+                    <input type="date" id="exp-end" class="exp-input">
+                </div>
+            </div>
+            <button class="btn btn-solid" style="padding:10px; font-size:14px;" onclick="exportJSONData()">Générer la base de données</button>
+        </div>
+        
         <div class="sync-info">Données : <span id="sync-lbl">Initialisation…</span></div>
     </div>
+    
     <div class="tabbar">
         <div class="tab on" onclick="sw('today',this)"><span class="tab-icon">🏠</span>Aujourd'hui</div>
         <div class="tab" onclick="sw('calendar',this)"><span class="tab-icon">📅</span>Mois</div>
@@ -184,7 +204,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebas
 import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 /* ═══════════════════════════════════════════════════════
-   GARDE GABRIEL — SÉCURITÉ ADMIN + VEILLES DE FÊTES
+   GARDE GABRIEL — V2.5 (SÉCURITÉ + VEILLES + EXPORT JSON)
    ═══════════════════════════════════════════════════════ */
 
 // --- GESTION DES DROITS (LIEN MAGIQUE) ---
@@ -199,9 +219,9 @@ if(!isAdmin) {
     document.getElementById('btn-force').style.display = 'none';
 }
 
-if(localStorage.getItem('app_version')!=='v20'){
+if(localStorage.getItem('app_version')!=='v21'){
     ['gabriel_school_holidays','gabriel_religious_holidays','gabriel_last_sync'].forEach(k=>localStorage.removeItem(k));
-    localStorage.setItem('app_version','v20');
+    localStorage.setItem('app_version','v21');
 }
 
 let exceptions=JSON.parse(localStorage.getItem('gabriel_exceptions')||'{}');
@@ -541,25 +561,59 @@ function renderStats(){
     }).join('');
 }
 
-function exportICS(){
-    const yr=new Date().getFullYear();
-    let ics="BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Garde Gabriel//FR\r\nCALSCALE:GREGORIAN\r\n";
-    let prev=null,blockStart=null;
-    for(let offset=0;offset<730;offset++){
-        const d=new Date(yr,0,1,12,0,0);d.setDate(d.getDate()+offset);
-        const ds=d2s(d);const c=getCustody(d);
-        if(c.who!==prev){
-            if(prev&&blockStart) ics+=`BEGIN:VEVENT\r\nSUMMARY:Gabriel - ${prev}\r\nDTSTART;VALUE=DATE:${blockStart.replace(/-/g,'')}\r\nDTEND;VALUE=DATE:${ds.replace(/-/g,'')}\r\nEND:VEVENT\r\n`;
-            blockStart=ds;prev=c.who;
-        }
+// Fonction d'export de la base de données JSON
+function exportJSONData() {
+    const startInput = document.getElementById('exp-start').value;
+    const endInput = document.getElementById('exp-end').value;
+    
+    if(!startInput || !endInput) return alert("Veuillez sélectionner les dates de début et de fin.");
+    
+    const start = new Date(startInput + 'T12:00:00');
+    const end = new Date(endInput + 'T12:00:00');
+    
+    if(start > end) return alert("La date de fin doit être postérieure à la date de début.");
+
+    const donneesExport = [];
+    
+    let veille = new Date(start);
+    veille.setDate(veille.getDate() - 1);
+    let parentVeille = getCustody(veille).who;
+
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+        const ds = d2s(d);
+        const c = getCustody(d);
+        const weekNo = isoWeek(d);
+        
+        const passageDeBras = (c.who !== parentVeille);
+        const sensPassage = passageDeBras ? `${parentVeille} -> ${c.who}` : "Non";
+        
+        let relName = relHols[ds] || false;
+        if(c.rel && !relName) relName = true;
+
+        donneesExport.push({
+            "Date": ds,
+            "Jour": d.toLocaleDateString('fr-FR', { weekday: 'long' }),
+            "Semaine": weekNo % 2 === 0 ? "Paire" : "Impaire",
+            "Garde": c.who,
+            "Passage_de_bras": passageDeBras,
+            "Sens_passage": sensPassage,
+            "Raison": c.why.replace(/ \(\+.*?\)/, ''), 
+            "Vacances_scolaires": !!c.vac,
+            "Ferie": !!c.ferie,
+            "Fete_religieuse": relName,
+            "Exception_manuelle": !!c.forced
+        });
+
+        parentVeille = c.who; 
     }
-    if(prev&&blockStart){
-        const end=new Date(yr,0,1,12,0,0);end.setDate(end.getDate()+730);
-        ics+=`BEGIN:VEVENT\r\nSUMMARY:Gabriel - ${prev}\r\nDTSTART;VALUE=DATE:${blockStart.replace(/-/g,'')}\r\nDTEND;VALUE=DATE:${d2s(end).replace(/-/g,'')}\r\nEND:VEVENT\r\n`;
-    }
-    ics+="END:VCALENDAR\r\n";
-    const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([ics],{type:'text/calendar'}));
-    a.download='garde_gabriel.ics';a.click();
+
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(donneesExport, null, 2));
+    const a = document.createElement('a');
+    a.href = dataStr;
+    a.download = `Export_Gabriel_${startInput}_au_${endInput}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
 }
 
 function sw(id,el){
@@ -567,7 +621,18 @@ function sw(id,el){
     document.getElementById('v-'+id).classList.add('on');
     document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));el.classList.add('on');
 }
-function renderAll(){renderToday();renderCal();renderYear();renderStats()}
+
+function renderAll(){
+    renderToday();renderCal();renderYear();renderStats();
+    
+    // Initialisation des dates d'export par défaut (Aujourd'hui -> +1 an)
+    if(!document.getElementById('exp-start').value) {
+        const todayExp = new Date();
+        const nextYearExp = new Date(); nextYearExp.setFullYear(todayExp.getFullYear() + 1);
+        document.getElementById('exp-start').value = d2s(todayExp);
+        document.getElementById('exp-end').value = d2s(nextYearExp);
+    }
+}
 
 async function syncHebcal(){
     const lastSync=localStorage.getItem('gabriel_last_sync');const now=Date.now();
@@ -621,7 +686,7 @@ window.chYear = chYear;
 window.goYear = goYear;
 window.toggleDay = toggleDay;
 window.stTab = stTab;
-window.exportICS = exportICS;
+window.exportJSONData = exportJSONData;
 window.sw = sw;
 
 renderAll();setTimeout(syncHebcal,2000);
