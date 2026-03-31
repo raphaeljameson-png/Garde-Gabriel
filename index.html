@@ -110,7 +110,7 @@
 <div class="app">
     <div id="v-today" class="view on">
         <h1>Aujourd'hui</h1>
-        <div class="version-tag">v2.11 — Détails Fêtes & Fériés par mois</div>
+        <div class="version-tag">v2.12 — Correction Roch Hachana (Filtre Strict)</div>
         <div class="hero">
             <div class="hero-date" id="t-date"></div>
             <div class="circle" id="t-circle"></div>
@@ -216,7 +216,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebas
 import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 /* ═══════════════════════════════════════════════════════
-   GARDE GABRIEL — V2.11 (Détails Légende Mois Dynamique)
+   GARDE GABRIEL — V2.12 (Filtre Hebcal Strict)
    ═══════════════════════════════════════════════════════ */
 
 // --- GESTION DES DROITS (LIEN MAGIQUE) ---
@@ -231,9 +231,9 @@ if(!isAdmin) {
     document.getElementById('btn-force').style.display = 'none';
 }
 
-if(localStorage.getItem('app_version')!=='v27'){
+if(localStorage.getItem('app_version')!=='v28'){
     ['gabriel_school_holidays','gabriel_religious_holidays','gabriel_last_sync'].forEach(k=>localStorage.removeItem(k));
-    localStorage.setItem('app_version','v27');
+    localStorage.setItem('app_version','v28');
 }
 
 let exceptions=JSON.parse(localStorage.getItem('gabriel_exceptions')||'{}');
@@ -790,20 +790,21 @@ async function syncHebcal(){
             data.items.forEach(item=>{
                 const orig=item.title_orig||item.title||'';const ds=item.date;if(!ds)return;
                 
-                if(orig.includes('Rosh Hashana')) {
-                    const name = orig.includes('II') ? 'Roch Hachana (J2)' : 'Roch Hachana';
-                    newRel[ds] = name;
-                    if(name === 'Roch Hachana') {
-                        const d1=s2d(ds); d1.setDate(d1.getDate()-1);
-                        newRel[d2s(d1)] = 'Veille de Roch Hachana';
-                    }
+                // Filtre STRICT pour ignorer les "Rosh Hashana LaBehemot" etc.
+                if(orig === 'Rosh Hashana' || orig === 'Rosh Hashana I' || orig === 'Rosh Hashana 1') {
+                    newRel[ds] = 'Roch Hachana';
+                    const d1=s2d(ds); d1.setDate(d1.getDate()-1);
+                    newRel[d2s(d1)] = 'Veille de Roch Hachana';
+                }
+                if(orig === 'Rosh Hashana II' || orig === 'Rosh Hashana 2') {
+                    newRel[ds] = 'Roch Hachana (J2)';
                 }
                 if(orig==='Yom Kippur') {
                     newRel[ds]='Kippour';
                     const d1=s2d(ds); d1.setDate(d1.getDate()-1);
                     newRel[d2s(d1)]='Veille de Kippour (Kol Nidré)';
                 }
-                if(orig==='Pourim') newRel[ds]='Pourim';
+                if(orig==='Pourim' || orig==='Purim') newRel[ds]='Pourim';
                 if(orig==='Pesach I') {
                     newRel[ds]='Pessah (J1)';
                     const d1=s2d(ds); d1.setDate(d1.getDate()-1);
@@ -811,7 +812,7 @@ async function syncHebcal(){
                 }
                 // (Pesach II retiré de la logique automatique selon le jugement)
                 if(orig==='Shmini Atzeret') newRel[ds]="Shmini 'Atsérêt";
-                if(orig==='Chanukah: 1 Candle'){const d1=s2d(ds);d1.setDate(d1.getDate()+1);newRel[d2s(d1)]='Hanouka (1er jour)'}
+                if(orig==='Chanukah: 1 Candle' || orig==='Chanukah: 1st Day'){const d1=s2d(ds);d1.setDate(d1.getDate()+1);newRel[d2s(d1)]='Hanouka (1er jour)'}
                 if(orig==='Chanukah: 8th Day') newRel[ds]='Hanouka (Dernier jour)';
             });
         }
