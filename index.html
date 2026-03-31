@@ -103,7 +103,7 @@
 <div class="app">
     <div id="v-today" class="view on">
         <h1>Aujourd'hui</h1>
-        <div class="version-tag">v2.9 — Export Passages Directs Exclusif</div>
+        <div class="version-tag">v2.10 — Fêtes juives sur 5 ans</div>
         <div class="hero">
             <div class="hero-date" id="t-date"></div>
             <div class="circle" id="t-circle"></div>
@@ -208,7 +208,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebas
 import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 /* ═══════════════════════════════════════════════════════
-   GARDE GABRIEL — V2.9 (SÉCURITÉ + VEILLES + EXPORTS MULTIPLES)
+   GARDE GABRIEL — V2.10 (FÊTES SUR 5 ANS)
    ═══════════════════════════════════════════════════════ */
 
 // --- GESTION DES DROITS (LIEN MAGIQUE) ---
@@ -223,9 +223,9 @@ if(!isAdmin) {
     document.getElementById('btn-force').style.display = 'none';
 }
 
-if(localStorage.getItem('app_version')!=='v25'){
+if(localStorage.getItem('app_version')!=='v26'){
     ['gabriel_school_holidays','gabriel_religious_holidays','gabriel_last_sync'].forEach(k=>localStorage.removeItem(k));
-    localStorage.setItem('app_version','v25');
+    localStorage.setItem('app_version','v26');
 }
 
 let exceptions=JSON.parse(localStorage.getItem('gabriel_exceptions')||'{}');
@@ -740,7 +740,8 @@ async function syncHebcal(){
     if(lastSync&&now-lastSync<7*24*3600*1000){document.getElementById('sync-lbl').textContent='Données à jour ✓';return}
     try{
         const curYr=new Date().getFullYear();const newRel={};
-        for(const yr of[curYr,curYr+1,curYr+2]){
+        // BOUCLE ELARGIE A 5 ANS (curYr + 5)
+        for(const yr of[curYr,curYr+1,curYr+2,curYr+3,curYr+4,curYr+5]){
             const res=await fetch(`https://www.hebcal.com/hebcal?v=1&cfg=json&maj=on&min=on&year=${yr}`);
             const data=await res.json();
             if(!data.items)continue;
