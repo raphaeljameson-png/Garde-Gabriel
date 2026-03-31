@@ -83,6 +83,13 @@
         .sync-info{text-align:center;font-size:11px;color:var(--muted);margin-top:16px}
         .exp-input { width:100%; padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--app-bg); color:var(--text); margin-top: 4px;}
         
+        /* Légende dynamique du mois */
+        .event-list { display:none; flex-direction:column; gap:6px; margin-top:16px; padding:12px; background:var(--app-bg); border-radius:8px; font-size:13px; }
+        .event-item { display:flex; align-items:center; gap:8px; color:var(--text); }
+        .edot { width:12px; height:12px; border-radius:50%; flex-shrink:0; }
+        .edot.rel { border:2px solid var(--religious); }
+        .edot.fer { border:2px solid var(--ferie); }
+
         /* Spécial Impression */
         .print-header { display: none; text-align: center; font-size: 24px; font-weight: bold; margin-bottom: 20px; }
         @media print {
@@ -103,7 +110,7 @@
 <div class="app">
     <div id="v-today" class="view on">
         <h1>Aujourd'hui</h1>
-        <div class="version-tag">v2.10 — Fêtes juives sur 5 ans</div>
+        <div class="version-tag">v2.11 — Détails Fêtes & Fériés par mois</div>
         <div class="hero">
             <div class="hero-date" id="t-date"></div>
             <div class="circle" id="t-circle"></div>
@@ -123,6 +130,7 @@
                 <button class="nav-btn" onclick="chMonth(1)">❯</button>
             </div>
             <div class="cal-grid" id="cal-grid"></div>
+            <div id="cal-events" class="event-list"></div>
         </div>
         <div class="btn-row">
             <button class="btn btn-outline" onclick="goToday()">Ce mois-ci</button>
@@ -208,7 +216,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebas
 import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 /* ═══════════════════════════════════════════════════════
-   GARDE GABRIEL — V2.10 (FÊTES SUR 5 ANS)
+   GARDE GABRIEL — V2.11 (Détails Légende Mois Dynamique)
    ═══════════════════════════════════════════════════════ */
 
 // --- GESTION DES DROITS (LIEN MAGIQUE) ---
@@ -223,9 +231,9 @@ if(!isAdmin) {
     document.getElementById('btn-force').style.display = 'none';
 }
 
-if(localStorage.getItem('app_version')!=='v26'){
+if(localStorage.getItem('app_version')!=='v27'){
     ['gabriel_school_holidays','gabriel_religious_holidays','gabriel_last_sync'].forEach(k=>localStorage.removeItem(k));
-    localStorage.setItem('app_version','v26');
+    localStorage.setItem('app_version','v27');
 }
 
 let exceptions=JSON.parse(localStorage.getItem('gabriel_exceptions')||'{}');
@@ -331,6 +339,22 @@ function getPH(year){
     const easter=new Date(year,mo-1,da,12,0,0);
     const add=n=>{const x=new Date(easter);x.setDate(x.getDate()+n);return d2s(x)};
     return new Set([`${year}-01-01`,`${year}-05-01`,`${year}-05-08`,`${year}-07-14`,`${year}-08-15`,`${year}-11-01`,`${year}-11-11`,`${year}-12-25`,add(1),add(39),add(50)]);
+}
+
+/* NOUVEAU: Fonction pour obtenir le nom exact d'un jour férié */
+function getFerieName(ds) {
+    const [yr] = ds.split('-');
+    const y = parseInt(yr);
+    const a=y%19,b=Math.floor(y/100),c=y%100,d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451),mo=Math.floor((h+l-7*m+114)/31),da=((h+l-7*m+114)%31)+1;
+    const easter=new Date(y,mo-1,da,12,0,0);
+    const add=n=>{const x=new Date(easter);x.setDate(x.getDate()+n);return d2s(x)};
+    const dict = {
+        [`${y}-01-01`]:"Jour de l'An", [`${y}-05-01`]:"Fête du Travail", [`${y}-05-08`]:"Victoire 1945",
+        [`${y}-07-14`]:"Fête Nationale", [`${y}-08-15`]:"Assomption", [`${y}-11-01`]:"Toussaint",
+        [`${y}-11-11`]:"Armistice 1918", [`${y}-12-25`]:"Noël",
+        [add(1)]:"Lundi de Pâques", [add(39)]:"Ascension", [add(50)]:"Lundi de Pentecôte"
+    };
+    return dict[ds] || null;
 }
 
 function isoWeek(date){
@@ -470,10 +494,14 @@ function renderCal(){
     g.innerHTML=['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'].map(d=>`<div class="dname">${d}</div>`).join('');
     const skip=(new Date(yr,mo,1).getDay()||7)-1;
     for(let i=0;i<skip;i++) g.innerHTML+=`<div class="day empty"></div>`;
+    
     const todayS=d2s(new Date());
+    let htmlEvents = ''; // Pour stocker la légende dynamique du mois
+
     for(let d=1;d<=new Date(yr,mo+1,0).getDate();d++){
         const date=new Date(yr,mo,d,12,0,0);const ds=d2s(date);
         const c=getCustody(date);
+        
         let cls=`day ${c.who==='Papa'?'papa':'maman'}`;
         if(ds===todayS)cls+=' today';
         if(c.forced)cls+=' exc';
@@ -481,7 +509,21 @@ function renderCal(){
         if(c.ferie)cls+=' fer';
         if(c.vac)cls+=' vac';
         g.innerHTML+=`<div class="${cls}" onclick="toggleDay('${ds}')">${d}</div>`;
+
+        // -- Construction de la légende dynamique --
+        const phName = getFerieName(ds);
+        if (phName) {
+            htmlEvents += `<div class="event-item"><span class="edot fer"></span><span style="font-weight:600;width:30px;text-align:right;margin-right:4px">${d}</span> ${phName}</div>`;
+        }
+        if (relHols[ds]) {
+            htmlEvents += `<div class="event-item"><span class="edot rel"></span><span style="font-weight:600;width:30px;text-align:right;margin-right:4px">${d}</span> ${relHols[ds]}</div>`;
+        }
     }
+
+    // Affichage ou masquage de la zone des détails du mois
+    const evContainer = document.getElementById('cal-events');
+    evContainer.innerHTML = htmlEvents;
+    evContainer.style.display = htmlEvents ? 'flex' : 'none';
 }
 
 let yrView=new Date().getFullYear();
