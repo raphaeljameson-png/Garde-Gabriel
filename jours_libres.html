@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Nos Jours Libres ❤️</title>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <style>
+        :root {
+            --app-bg:#f2f2f7; --text:#000; --muted:#8e8e93; --card:#fff;
+            --tab-bg:rgba(255,255,255,.85); --border:rgba(60,60,67,.29);
+            --free:#FF2D55; --free-bg:rgba(255,45,85,.12);
+            --gab:#007AFF; --ep:#AF52DE; --both-busy:rgba(118,118,128,.08);
+            --seg:rgba(118,118,128,.12); --seg-on:#fff; --safe:env(safe-area-inset-bottom,20px);
+        }
+        @media(prefers-color-scheme:dark){:root{
+            --app-bg:#000; --text:#fff; --muted:rgba(235,235,245,.6); --card:#1c1c1e;
+            --tab-bg:rgba(28,28,30,.85); --border:rgba(84,84,88,.65);
+            --free-bg:rgba(255,45,85,.25); --both-busy:rgba(118,118,128,.15);
+            --seg:rgba(118,118,128,.24); --seg-on:#636366;
+        }}
+        *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display",sans-serif}
+        body{margin:0;background:#e5e5ea;display:flex;justify-content:center}
+        .app{width:100%;max-width:450px;background:var(--app-bg);color:var(--text);min-height:100vh;overflow-x:hidden;padding-bottom:calc(75px + var(--safe))}
+
+        .tabbar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:450px;height:calc(55px + var(--safe));background:var(--tab-bg);backdrop-filter:blur(25px);-webkit-backdrop-filter:blur(25px);border-top:.5px solid var(--border);display:flex;padding-bottom:var(--safe);z-index:999}
+        .tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--muted);font-size:10px;font-weight:500;cursor:pointer}
+        .tab.on{color:var(--free)} .tab-icon{font-size:22px;margin-bottom:2px}
+        .view{display:none;padding:20px;padding-top:max(30px,env(safe-area-inset-top));animation:fu .25s ease}
+        .view.on{display:block}
+        @keyframes fu{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+        h1{font-size:32px;font-weight:700;letter-spacing:-.5px;margin:0 0 6px}
+        .subtitle{font-size:14px;color:var(--muted);margin-bottom:20px}
+        h2{font-size:20px;font-weight:600;margin:0 0 12px}
+        .card{background:var(--card);border-radius:12px;margin-bottom:18px;overflow:hidden}
+        .row{display:flex;justify-content:space-between;align-items:center;padding:13px 16px;border-bottom:.5px solid var(--border);font-size:15px}
+        .row:last-child{border-bottom:none}
+        .rl{display:flex;flex-direction:column;gap:3px} .rt{font-weight:500} .rs{font-size:12px;color:var(--muted)}
+
+        /* Hero */
+        .hero{text-align:center;padding:20px 10px 10px}
+        .hero-big{font-size:64px;margin-bottom:6px}
+        .hero-count{font-size:42px;font-weight:800;color:var(--free);margin-bottom:4px}
+        .hero-label{font-size:15px;color:var(--muted);margin-bottom:6px}
+        .hero-next{font-size:13px;color:var(--muted);background:var(--free-bg);display:inline-block;padding:6px 14px;border-radius:20px;font-weight:600;color:var(--free)}
+
+        /* Calendar */
+        .cal-nav{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+        .nav-btn{background:var(--seg);border:none;border-radius:50%;width:32px;height:32px;color:var(--text);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+        .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;text-align:center}
+        .dname{font-size:11px;font-weight:500;color:var(--muted);margin-bottom:5px}
+        .day{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:500;border-radius:50%;position:relative}
+        .day.empty{visibility:hidden}
+        .day.free{background:var(--free-bg);color:var(--free);font-weight:700}
+        .day.busy{background:var(--both-busy);color:var(--muted)}
+        .day.today{outline:2.5px solid var(--text);outline-offset:-1px}
+        .day.free.today{outline-color:var(--free)}
+
+        /* Detail dots under days */
+        .day .dots{position:absolute;bottom:2px;display:flex;gap:2px}
+        .day .dots span{width:4px;height:4px;border-radius:50%}
+
+        /* Year grid */
+        .yr-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+        .mm{background:var(--card);border-radius:12px;padding:10px}
+        .mm-title{font-size:12px;font-weight:600;text-align:center;margin-bottom:7px}
+        .mm-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center}
+        .mdn{font-size:8px;color:var(--muted);margin-bottom:2px}
+        .md{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:9px;border-radius:50%}
+        .md.free{background:var(--free-bg);color:var(--free);font-weight:700}
+        .md.busy{background:var(--both-busy);color:var(--muted)}
+        .md.today{outline:1.5px solid var(--text);outline-offset:-1px}
+
+        .legend{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;font-size:11px;color:var(--muted);margin:14px 0 6px}
+        .leg{display:flex;align-items:center;gap:4px} .ldot{width:10px;height:10px;border-radius:50%}
+
+        .btn{border:none;border-radius:12px;padding:14px;font-size:16px;font-weight:600;width:100%;cursor:pointer;margin-top:8px;display:block;text-align:center}
+        .btn-outline{background:transparent;color:var(--free);border:1.5px solid var(--free)}
+        .btn:active{opacity:.75}
+        .btn-row{display:flex;gap:10px;margin-top:10px} .btn-row .btn{flex:1;margin-top:0}
+
+        .sync-info{text-align:center;font-size:11px;color:var(--muted);margin-top:16px}
+
+        /* Stats bars */
+        .stat-row{padding:14px 16px;border-bottom:.5px solid var(--border)}
+        .stat-row:last-child{border-bottom:none}
+        .stat-month{font-size:14px;font-weight:600;margin-bottom:8px}
+        .stat-bar{display:flex;height:8px;border-radius:4px;overflow:hidden;background:var(--seg);margin-bottom:4px}
+        .stat-fill{background:var(--free);border-radius:4px}
+        .stat-detail{display:flex;justify-content:space-between;font-size:12px;color:var(--muted)}
+
+        @media print{
+            *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+            .tabbar,.btn,.nav-btn,.sync-info{display:none!important}
+            body,.app{background:white!important}
+        }
+    </style>
+</head>
+<body>
+<div class="app">
+
+    <!-- ══ ACCUEIL ══ -->
+    <div id="v-home" class="view on">
+        <h1>Nos Jours Libres</h1>
+        <div class="subtitle">Raphaël & Marion — sans enfants ❤️</div>
+        <div class="hero">
+            <div class="hero-big">🥂</div>
+            <div class="hero-count" id="h-count">—</div>
+            <div class="hero-label" id="h-label">jours libres ce mois-ci</div>
+            <div class="hero-next" id="h-next">…</div>
+        </div>
+        <h2 style="margin-top:22px">Prochains jours libres</h2>
+        <div class="card" id="upcoming"></div>
+        <h2 style="margin-top:6px">Prochaines séries libres</h2>
+        <div class="card" id="streaks"></div>
+        <div class="sync-info">Données : <span id="sync-lbl">Initialisation…</span></div>
+    </div>
+
+    <!-- ══ MOIS ══ -->
+    <div id="v-cal" class="view">
+        <h1>Mois</h1>
+        <div class="card" style="padding:14px 10px">
+            <div class="cal-nav">
+                <button class="nav-btn" onclick="chMonth(-1)">❮</button>
+                <h2 style="margin:0;font-size:17px" id="cal-title"></h2>
+                <button class="nav-btn" onclick="chMonth(1)">❯</button>
+            </div>
+            <div class="cal-grid" id="cal-grid"></div>
+        </div>
+        <div class="btn-row">
+            <button class="btn btn-outline" onclick="goToday()">Ce mois-ci</button>
+        </div>
+        <div class="legend">
+            <span class="leg"><span class="ldot" style="background:var(--free)"></span>Libres tous les 2</span>
+            <span class="leg"><span class="ldot" style="background:var(--both-busy)"></span>Au moins 1 a les enfants</span>
+        </div>
+    </div>
+
+    <!-- ══ ANNÉE ══ -->
+    <div id="v-year" class="view">
+        <h1>Année</h1>
+        <div class="card" style="padding:13px 14px">
+            <div class="cal-nav" style="margin-bottom:0">
+                <button class="nav-btn" onclick="chYear(-1)">❮</button>
+                <h2 style="margin:0;font-size:19px" id="yr-title"></h2>
+                <button class="nav-btn" onclick="chYear(1)">❯</button>
+            </div>
+        </div>
+        <div class="yr-grid" id="yr-grid"></div>
+        <div class="legend">
+            <span class="leg"><span class="ldot" style="background:var(--free)"></span>Libres</span>
+            <span class="leg"><span class="ldot" style="background:var(--both-busy)"></span>Occupés</span>
+        </div>
+        <div class="btn-row">
+            <button class="btn btn-outline" onclick="goYear()">Année en cours</button>
+        </div>
+    </div>
+
+    <!-- ══ STATS ══ -->
+    <div id="v-stats" class="view">
+        <h1>Statistiques</h1>
+        <div class="card" id="stat-months"></div>
+    </div>
+
+    <div class="tabbar">
+        <div class="tab on" onclick="sw('home',this)"><span class="tab-icon">❤️</span>Libres</div>
+        <div class="tab" onclick="sw('cal',this)"><span class="tab-icon">📅</span>Mois</div>
+        <div class="tab" onclick="sw('year',this)"><span class="tab-icon">🗓️</span>Année</div>
+        <div class="tab" onclick="sw('stats',this)"><span class="tab-icon">📊</span>Stats</div>
+    </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+/* ═══════════════════════════════════════════════════════
+   NOS JOURS LIBRES — V1.0
+   Croisement Gabriel (Raphaël) + Pierre & Élise (Marion)
+   
+   LIBRE = Gabriel chez Maman (pas chez Raphaël)
+        ET Pierre & Élise chez Papa/Julien (pas chez Marion)
+   ═══════════════════════════════════════════════════════ */
+
+const d2s = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const s2d = s => { const [y,m,j] = s.split('-').map(Number); return new Date(y, m-1, j, 12, 0, 0) };
+
+function computeEaster(year) {
+    const a=year%19,b=Math.floor(year/100),c=year%100,d=Math.floor(b/4),e=b%4,
+          f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30,
+          i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451),
+          mo=Math.floor((h+l-7*m+114)/31),da=((h+l-7*m+114)%31)+1;
+    return new Date(year, mo-1, da, 12, 0, 0);
+}
+function getMothersDay(yr) {
+    let f = new Date(yr,4,31,12); while(f.getDay()!==0) f.setDate(f.getDate()-1);
+    const e=computeEaster(yr),p=new Date(e);p.setDate(e.getDate()+49);
+    if(d2s(f)===d2s(p)) f.setDate(f.getDate()+7); return d2s(f);
+}
+function getFathersDay(yr) {
+    const f=new Date(yr,5,1,12);let s=0;while(s<3){if(f.getDay()===0)s++;if(s<3)f.setDate(f.getDate()+1)}return d2s(f);
+}
+function getPH(year) {
+    const e=computeEaster(year),add=n=>{const x=new Date(e);x.setDate(x.getDate()+n);return d2s(x)};
+    return new Set([`${year}-01-01`,`${year}-05-01`,`${year}-05-08`,`${year}-07-14`,`${year}-08-15`,`${year}-11-01`,`${year}-11-11`,`${year}-12-25`,add(1),add(39),add(50)]);
+}
+function getAscDS(yr){const e=computeEaster(yr),a=new Date(e);a.setDate(e.getDate()+39);return d2s(a)}
+function getEMDS(yr){const e=computeEaster(yr),m=new Date(e);m.setDate(e.getDate()+1);return d2s(m)}
+function isoWeek(date){const t=new Date(Date.UTC(date.getFullYear(),date.getMonth(),date.getDate()));const d=t.getUTCDay()||7;t.setUTCDate(t.getUTCDate()+4-d);const y=new Date(Date.UTC(t.getUTCFullYear(),0,1));return Math.ceil((((t-y)/86400000)+1)/7)}
+
+/* ── VACANCES Zone C (partagées) ── */
+const schoolHols = [
+    {n:"Toussaint",s:"2024-10-19",e:"2024-11-03",mid:"2024-10-26"},
+    {n:"Noël",s:"2024-12-21",e:"2025-01-05",mid:"2024-12-28"},
+    {n:"Hiver",s:"2025-02-15",e:"2025-03-02",mid:"2025-02-22"},
+    {n:"Printemps",s:"2025-04-12",e:"2025-04-27",mid:"2025-04-19"},
+    {n:"Été",s:"2025-07-05",e:"2025-08-31",summer:true},
+    {n:"Toussaint",s:"2025-10-18",e:"2025-11-02",mid:"2025-10-25"},
+    {n:"Noël",s:"2025-12-20",e:"2026-01-04",mid:"2025-12-27"},
+    {n:"Hiver",s:"2026-02-21",e:"2026-03-08",mid:"2026-02-28"},
+    {n:"Printemps",s:"2026-04-18",e:"2026-05-03",mid:"2026-04-25"},
+    {n:"Été",s:"2026-07-04",e:"2026-08-31",summer:true},
+    {n:"Toussaint",s:"2026-10-17",e:"2026-11-01",mid:"2026-10-24"},
+    {n:"Noël",s:"2026-12-19",e:"2027-01-03",mid:"2026-12-26"},
+    {n:"Hiver",s:"2027-02-20",e:"2027-03-07",mid:"2027-02-27"},
+    {n:"Printemps",s:"2027-04-17",e:"2027-05-02",mid:"2027-04-24"},
+    {n:"Été",s:"2027-07-06",e:"2027-08-31",summer:true},
+    {n:"Toussaint",s:"2027-10-23",e:"2027-11-07",mid:"2027-10-30"},
+    {n:"Noël",s:"2027-12-18",e:"2028-01-02",mid:"2027-12-25"},
+    {n:"Hiver",s:"2028-02-19",e:"2028-03-05",mid:"2028-02-26"},
+    {n:"Printemps",s:"2028-04-15",e:"2028-04-30",mid:"2028-04-22"},
+    {n:"Été",s:"2028-07-06",e:"2028-08-31",summer:true},
+    {n:"Toussaint",s:"2028-10-21",e:"2028-11-05",mid:"2028-10-28"},
+    {n:"Noël",s:"2028-12-23",e:"2029-01-07",mid:"2028-12-30"},
+    {n:"Hiver",s:"2029-02-17",e:"2029-03-04",mid:"2029-02-24"},
+    {n:"Printemps",s:"2029-04-14",e:"2029-04-29",mid:"2029-04-21"},
+    {n:"Été",s:"2029-07-06",e:"2029-08-31",summer:true},
+    {n:"Toussaint",s:"2029-10-20",e:"2029-11-04",mid:"2029-10-27"},
+    {n:"Noël",s:"2029-12-22",e:"2030-01-06",mid:"2029-12-29"},
+    {n:"Hiver",s:"2030-02-23",e:"2030-03-10",mid:"2030-03-02"},
+    {n:"Printemps",s:"2030-04-20",e:"2030-05-05",mid:"2030-04-27"},
+    {n:"Été",s:"2030-07-06",e:"2030-08-31",summer:true}
+];
+
+/* ── FÊTES JUIVES (Gabriel) ── */
+let relHols = {
+    "2025-04-12":"Veille de Pessah","2025-04-13":"Pessah (J1)",
+    "2025-09-22":"Veille de Roch Hachana","2025-09-23":"Roch Hachana","2025-09-24":"Roch Hachana (J2)",
+    "2025-10-01":"Veille de Kippour","2025-10-02":"Kippour",
+    "2026-04-01":"Veille de Pessah","2026-04-02":"Pessah (J1)",
+    "2026-09-11":"Veille de Roch Hachana","2026-09-12":"Roch Hachana","2026-09-13":"Roch Hachana (J2)",
+    "2026-09-20":"Veille de Kippour","2026-09-21":"Kippour",
+    "2025-12-15":"Hanouka (1er)","2025-12-22":"Hanouka (Dernier)",
+    "2026-03-03":"Pourim","2026-10-03":"Shmini Atseret"
+};
+
+/* ── FIREBASE — Exceptions des deux calendriers ── */
+let exGabriel = {};
+let exEP = {};
+
+const firebaseConfig = {
+    apiKey: "AIzaSyDlqyLy8Uy2mXXRruuFJmEEX6vZ_InQ1JA",
+    authDomain: "garde-gabriel.firebaseapp.com",
+    projectId: "garde-gabriel",
+    storageBucket: "garde-gabriel.firebasestorage.app",
+    messagingSenderId: "781312886263",
+    appId: "1:781312886263:web:3a749e6ef8e52cc6f99af2"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+let synced = 0;
+
+onSnapshot(doc(db, "garde", "exceptions"), snap => {
+    if (snap.exists()) exGabriel = snap.data();
+    synced++; if (synced >= 2) { renderAll(); document.getElementById('sync-lbl').textContent = 'Synchronisé ⚡'; }
+});
+onSnapshot(doc(db, "garde_elise_pierre", "exceptions"), snap => {
+    if (snap.exists()) exEP = snap.data();
+    synced++; if (synced >= 2) { renderAll(); document.getElementById('sync-lbl').textContent = 'Synchronisé ⚡'; }
+});
+
+/* ═══════════════════════════════════════════
+   ALGORITHME GABRIEL (Raphaël)
+   Résidence Maman. Papa = S paires WE + S impaires Mer soir
+   + fêtes juives + vacances alternées
+   ═══════════════════════════════════════════ */
+function getGabriel(date) {
+    const ds=d2s(date),yr=date.getFullYear(),dow=date.getDay(),t=date.getTime();
+    const weekNo=isoWeek(date),isEvenWk=(weekNo%2===0);
+
+    let isVac=false;
+    for(const h of schoolHols){const s=s2d(h.s),fn=new Date(s);fn.setDate(fn.getDate()-1);if(t>=fn.getTime()&&t<=s2d(h.e).getTime()){isVac=true;break}}
+    const ph=getPH(yr);
+
+    if(exGabriel[ds]) return exGabriel[ds];
+    if(ds===getMothersDay(yr)) return "Maman";
+    if(ds===getFathersDay(yr)) return "Papa";
+
+    // Vacances
+    for(const h of schoolHols){
+        const s=s2d(h.s),fn=new Date(s);fn.setDate(fn.getDate()-1);
+        if(t<fn.getTime()||t>s2d(h.e).getTime()) continue;
+        const sY=parseInt(h.s.split('-')[0]),isEvenY=(sY%2===0);
+        if(h.summer){
+            const sat2=new Date(s);sat2.setDate(s.getDate()+14);
+            const sat3=new Date(s);sat3.setDate(s.getDate()+28);
+            const sat4=new Date(s);sat4.setDate(s.getDate()+42);
+            let block=0;
+            if(t>=sat4.getTime())block=3;else if(t>=sat3.getTime())block=2;else if(t>=sat2.getTime())block=1;
+            const papaEven=(block===1||block===3),papaOdd=(block===0||block===2);
+            return (isEvenY?papaEven:papaOdd)?"Papa":"Maman";
+        } else {
+            const isFirst=(t<s2d(h.mid).getTime());
+            const papa=isEvenY?!isFirst:isFirst;
+            return papa?"Papa":"Maman";
+        }
+    }
+
+    // Fêtes juives
+    if(relHols[ds]) return (yr%2===0)?"Papa":"Maman";
+
+    // Fériés/ponts
+    const yesterday=new Date(date);yesterday.setDate(date.getDate()-1);const yds=d2s(yesterday);
+    if(dow===1&&ph.has(ds)) return isEvenWk?"Maman":"Papa";
+    if(dow===5&&ph.has(ds)) return isEvenWk?"Papa":"Maman";
+    if(dow===4&&ph.has(ds)) return isEvenWk?"Papa":"Maman";
+    if(dow===5&&ph.has(yds)) return isEvenWk?"Papa":"Maman";
+
+    // Normal
+    if(isEvenWk&&(dow===5||dow===6||dow===0)) return "Papa";
+    if(!isEvenWk&&dow===3) return "Papa";
+    return "Maman";
+}
+
+/* ═══════════════════════════════════════════
+   ALGORITHME PIERRE & ÉLISE (Marion)
+   Résidence Maman. Papa = S impaires Jeu/Ven/Sam/Dim
+   + vacances alternées + Noël/Ascension/Pâques spéciaux
+   ═══════════════════════════════════════════ */
+function getEP(date) {
+    const ds=d2s(date),yr=date.getFullYear(),dow=date.getDay(),t=date.getTime();
+    const weekNo=isoWeek(date),isOddWk=(weekNo%2!==0);
+
+    let isVac=false;
+    for(const h of schoolHols){const fn=new Date(s2d(h.s));fn.setDate(fn.getDate()-1);if(t>=fn.getTime()&&t<=s2d(h.e).getTime()){isVac=true;break}}
+    const ph=getPH(yr);
+
+    if(exEP[ds]) return exEP[ds];
+    if(ds===getMothersDay(yr)) return "Maman";
+    if(ds===getFathersDay(yr)) return "Papa";
+    if(ds===`${yr}-12-24`) return "Maman";
+    if(ds===`${yr}-12-25`) return "Papa";
+    if(ds===getEMDS(yr)) return "Maman";
+
+    // Ascension Thu→Sun → Maman
+    const ascD=s2d(getAscDS(yr));
+    for(let i=0;i<=3;i++){const x=new Date(ascD);x.setDate(ascD.getDate()+i);if(ds===d2s(x)) return "Maman"}
+
+    // Vacances
+    for(const h of schoolHols){
+        const fn=new Date(s2d(h.s));fn.setDate(fn.getDate()-1);
+        if(t<fn.getTime()||t>s2d(h.e).getTime()) continue;
+        const sY=parseInt(h.s.split('-')[0]),isOddY=(sY%2!==0);
+        if(h.summer){
+            const mo=date.getMonth(),day=date.getDate(),fq=(day<=15);
+            let papa=false;if(mo===6||mo===7) papa=isOddY?!fq:fq;
+            return papa?"Papa":"Maman";
+        } else {
+            const isFirst=(t<s2d(h.mid).getTime());
+            const papa=isOddY?isFirst:!isFirst;
+            return papa?"Papa":"Maman";
+        }
+    }
+
+    // Fériés
+    if(dow===1&&ph.has(ds)){const ps=new Date(date);ps.setDate(date.getDate()-1);if(isoWeek(ps)%2!==0) return "Papa"}
+    if(dow===3&&ph.has(ds)&&isOddWk) return "Papa";
+
+    // Normal : Papa = Jeu/Ven/Sam/Dim semaines impaires
+    if(isOddWk&&(dow===4||dow===5||dow===6||dow===0)) return "Papa";
+    return "Maman";
+}
+
+/* ═══════════════════════════════════════════
+   CROISEMENT : jour libre = Gabriel chez Maman + EP chez Papa
+   Raphaël libre quand Gabriel pas chez lui = Gabriel chez Maman
+   Marion libre quand EP pas chez elle = EP chez Papa
+   ═══════════════════════════════════════════ */
+function isFree(date) {
+    const gab = getGabriel(date);
+    const ep = getEP(date);
+    const raphaelFree = (gab === "Maman");  // Gabriel chez sa mère → Raphaël libre
+    const marionFree = (ep === "Papa");      // EP chez leur père → Marion libre
+    return { free: raphaelFree && marionFree, raphaelFree, marionFree, gab, ep };
+}
+
+/* ── RENDU ACCUEIL ── */
+function renderHome() {
+    const now = new Date();
+    const yr = now.getFullYear(), mo = now.getMonth();
+    let countMonth = 0;
+    for (let d = 1; d <= new Date(yr,mo+1,0).getDate(); d++) {
+        if (isFree(new Date(yr,mo,d,12)).free) countMonth++;
+    }
+    document.getElementById('h-count').textContent = countMonth;
+
+    // Prochain jour libre
+    let nextFree = null;
+    for (let i = 0; i <= 365; i++) {
+        const d = new Date(now); d.setDate(now.getDate() + i);
+        if (isFree(d).free) {
+            if (i === 0) { nextFree = "Aujourd'hui ! 🎉"; }
+            else if (i === 1) { nextFree = "Demain ! 🎉"; }
+            else { nextFree = `Prochain : ${d.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})} (dans ${i}j)`; }
+            break;
+        }
+    }
+    document.getElementById('h-next').textContent = nextFree || "Aucun trouvé";
+
+    // Liste des 10 prochains
+    const ul = document.getElementById('upcoming'); ul.innerHTML = '';
+    let found = 0;
+    for (let i = 0; i <= 180 && found < 10; i++) {
+        const d = new Date(now); d.setDate(now.getDate() + i);
+        if (isFree(d).free) {
+            const label = d.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});
+            const sub = i === 0 ? "Aujourd'hui" : i === 1 ? "Demain" : `Dans ${i} jours`;
+            ul.innerHTML += `<div class="row"><div class="rl"><span class="rt" style="color:var(--free)">${label}</span><span class="rs">${sub}</span></div><span style="font-size:18px">❤️</span></div>`;
+            found++;
+        }
+    }
+
+    // Séries consécutives
+    const streaks = []; let streak = null;
+    for (let i = 0; i <= 365; i++) {
+        const d = new Date(now); d.setDate(now.getDate() + i);
+        if (isFree(d).free) {
+            if (!streak) streak = { start: new Date(d), count: 1 };
+            else streak.count++;
+        } else {
+            if (streak && streak.count >= 2) streaks.push({ ...streak, end: new Date(d.getTime() - 86400000) });
+            streak = null;
+        }
+        if (streaks.length >= 5) break;
+    }
+    if (streak && streak.count >= 2) streaks.push({ ...streak, end: new Date(now.getTime() + (365-1)*86400000) });
+
+    const sk = document.getElementById('streaks'); sk.innerHTML = '';
+    if (streaks.length === 0) sk.innerHTML = '<div class="row"><span class="rs">Pas de série de 2+ jours à venir</span></div>';
+    streaks.forEach(s => {
+        const fmt = d => d.toLocaleDateString('fr-FR',{day:'numeric',month:'short'});
+        sk.innerHTML += `<div class="row"><div class="rl"><span class="rt" style="color:var(--free)">${s.count} jours consécutifs 🔥</span><span class="rs">${fmt(s.start)} → ${fmt(s.end)}</span></div></div>`;
+    });
+}
+
+/* ── CALENDRIER MOIS ── */
+let calDate = new Date(); calDate.setDate(1);
+const chMonth = d => { calDate.setMonth(calDate.getMonth()+d); renderCal() };
+const goToday = () => { calDate = new Date(); calDate.setDate(1); renderCal() };
+
+function renderCal() {
+    const yr=calDate.getFullYear(),mo=calDate.getMonth();
+    const title=new Date(yr,mo,1).toLocaleDateString('fr-FR',{month:'long',year:'numeric'});
+    document.getElementById('cal-title').textContent=title.charAt(0).toUpperCase()+title.slice(1);
+    const g=document.getElementById('cal-grid');
+    g.innerHTML=['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'].map(d=>`<div class="dname">${d}</div>`).join('');
+    const skip=(new Date(yr,mo,1).getDay()||7)-1;
+    for(let i=0;i<skip;i++) g.innerHTML+=`<div class="day empty"></div>`;
+    const todayS=d2s(new Date());
+    for(let d=1;d<=new Date(yr,mo+1,0).getDate();d++){
+        const date=new Date(yr,mo,d,12),ds=d2s(date);
+        const f=isFree(date);
+        let cls=`day ${f.free?'free':'busy'}`;
+        if(ds===todayS)cls+=' today';
+        // Tooltip via title
+        const tip=f.free?'Libres ❤️':`Gabriel: ${f.gab}, EP: ${f.ep}`;
+        g.innerHTML+=`<div class="${cls}" title="${tip}">${d}</div>`;
+    }
+}
+
+/* ── ANNÉE ── */
+let yrView=new Date().getFullYear();
+const chYear=d=>{yrView+=d;renderYear()};const goYear=()=>{yrView=new Date().getFullYear();renderYear()};
+
+function renderYear(){
+    document.getElementById('yr-title').textContent=yrView;
+    const g=document.getElementById('yr-grid');g.innerHTML='';
+    const MO=['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Août','Sep','Oct','Nov','Déc'];
+    const todayS=d2s(new Date());
+    for(let m=0;m<12;m++){
+        let html=`<div class="mm"><div class="mm-title">${MO[m]}</div><div class="mm-grid">`;
+        html+=['L','M','M','J','V','S','D'].map(d=>`<div class="mdn">${d}</div>`).join('');
+        const skip=(new Date(yrView,m,1).getDay()||7)-1;
+        for(let i=0;i<skip;i++) html+=`<div></div>`;
+        for(let d=1;d<=new Date(yrView,m+1,0).getDate();d++){
+            const date=new Date(yrView,m,d,12),ds=d2s(date);
+            const f=isFree(date);
+            let cls=`md ${f.free?'free':'busy'}`;
+            if(ds===todayS)cls+=' today';
+            html+=`<div class="${cls}">${d}</div>`;
+        }
+        html+=`</div></div>`;g.innerHTML+=html;
+    }
+}
+
+/* ── STATS ── */
+function renderStats(){
+    const now=new Date();const el=document.getElementById('stat-months');let html='';
+    for(let i=0;i<12;i++){
+        const yr=now.getFullYear(),mo=(now.getMonth()+i)%12,yy=yr+Math.floor((now.getMonth()+i)/12);
+        const daysInMonth=new Date(yy,mo+1,0).getDate();
+        let free=0;
+        for(let d=1;d<=daysInMonth;d++){if(isFree(new Date(yy,mo,d,12)).free) free++}
+        const pct=Math.round(free/daysInMonth*100);
+        const label=new Date(yy,mo,1).toLocaleDateString('fr-FR',{month:'long',year:'numeric'});
+        html+=`<div class="stat-row"><div class="stat-month">${label.charAt(0).toUpperCase()+label.slice(1)}</div><div class="stat-bar"><div class="stat-fill" style="width:${pct}%"></div></div><div class="stat-detail"><span>${free} jours libres</span><span style="color:var(--free);font-weight:600">${pct}%</span></div></div>`;
+    }
+    el.innerHTML=html;
+}
+
+function sw(id,el){
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));
+    document.getElementById('v-'+id).classList.add('on');
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));el.classList.add('on');
+}
+
+function renderAll(){renderHome();renderCal();renderYear();renderStats()}
+
+window.chMonth=chMonth;window.goToday=goToday;window.chYear=chYear;window.goYear=goYear;window.sw=sw;
+
+// Initial render (avant Firebase, avec exceptions vides)
+renderAll();
+
+// Sync HebCal pour Gabriel (fêtes juives)
+async function syncHebcal(){
+    try{
+        const curYr=new Date().getFullYear();const newRel={};
+        for(const yr of[curYr,curYr+1,curYr+2,curYr+3,curYr+4,curYr+5]){
+            const res=await fetch(`https://www.hebcal.com/hebcal?v=1&cfg=json&maj=on&min=on&year=${yr}`);
+            const data=await res.json();if(!data.items)continue;
+            data.items.forEach(item=>{
+                const orig=item.title_orig||item.title||'';const ds=item.date;if(!ds)return;
+                if(orig==='Rosh Hashana'||orig==='Rosh Hashana I'||orig==='Rosh Hashana 1'){newRel[ds]='Roch Hachana';const d1=s2d(ds);d1.setDate(d1.getDate()-1);newRel[d2s(d1)]='Veille Roch Hachana'}
+                if(orig==='Rosh Hashana II'||orig==='Rosh Hashana 2') newRel[ds]='Roch Hachana J2';
+                if(orig==='Yom Kippur'){newRel[ds]='Kippour';const d1=s2d(ds);d1.setDate(d1.getDate()-1);newRel[d2s(d1)]='Kol Nidré'}
+                if(orig==='Pourim'||orig==='Purim') newRel[ds]='Pourim';
+                if(orig==='Pesach I'){newRel[ds]='Pessah J1';const d1=s2d(ds);d1.setDate(d1.getDate()-1);newRel[d2s(d1)]='Seder'}
+                if(orig==='Shmini Atzeret') newRel[ds]='Shmini Atseret';
+                if(orig==='Chanukah: 1 Candle'||orig==='Chanukah: 1st Day'){const d1=s2d(ds);d1.setDate(d1.getDate()+1);newRel[d2s(d1)]='Hanouka 1er'}
+                if(orig==='Chanukah: 8th Day') newRel[ds]='Hanouka Dernier';
+            });
+        }
+        if(Object.keys(newRel).length>5){relHols=newRel;renderAll()}
+    }catch(e){}
+}
+setTimeout(syncHebcal,3000);
+</script>
+</body>
+</html>
