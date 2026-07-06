@@ -110,7 +110,7 @@
 <div class="app">
     <div id="v-today" class="view on">
         <h1>Aujourd'hui</h1>
-        <div class="version-tag">v2.13 — Correction Roch Hachana (titre Hebcal avec année)</div>
+        <div class="version-tag">v2.14 — Fêtes juives en nuitées (calendrier hébraïque) + jeudis fériés</div>
         <div class="hero">
             <div class="hero-date" id="t-date"></div>
             <div class="circle" id="t-circle"></div>
@@ -216,7 +216,10 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebas
 import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 /* ═══════════════════════════════════════════════════════
-   GARDE GABRIEL — V2.13 (Fix titre Hebcal « Rosh Hashana 5787 »)
+   GARDE GABRIEL — V2.14 (Fêtes juives en nuitées + jeudis fériés)
+   Convention : un jour marqué = la NUIT que Gabriel passe chez ce parent.
+   Une fête hébraïque commence la veille au soir : on marque chaque nuit
+   contenue dans la fête (de la veille à l'avant-dernier jour civil inclus).
    ═══════════════════════════════════════════════════════ */
 
 // --- GESTION DES DROITS (LIEN MAGIQUE) ---
@@ -231,9 +234,9 @@ if(!isAdmin) {
     document.getElementById('btn-force').style.display = 'none';
 }
 
-if(localStorage.getItem('app_version')!=='v29'){
+if(localStorage.getItem('app_version')!=='v30'){
     ['gabriel_school_holidays','gabriel_religious_holidays','gabriel_last_sync'].forEach(k=>localStorage.removeItem(k));
-    localStorage.setItem('app_version','v29');
+    localStorage.setItem('app_version','v30');
 }
 
 let exceptions=JSON.parse(localStorage.getItem('gabriel_exceptions')||'{}');
@@ -312,16 +315,18 @@ let schoolHols=JSON.parse(localStorage.getItem('gabriel_school_holidays')||'null
     {n:"Été",s:"2030-07-06",e:"2030-08-31",summer:true}
 ];
 
-/* ── FÊTES JUIVES DURES (Sans Pessah J2 selon le jugement) ── */
+/* ── FÊTES JUIVES DURES (convention nuitée : la date marquée = la nuit chez le parent de la fête) ── */
 let relHols=JSON.parse(localStorage.getItem('gabriel_religious_holidays')||'null')||{
-    "2025-04-12":"Veille de Pessah (Seder)","2025-04-13":"Pessah (J1)",
-    "2025-09-22":"Veille de Roch Hachana","2025-09-23":"Roch Hachana","2025-09-24":"Roch Hachana (J2)",
-    "2025-10-01":"Veille de Kippour (Kol Nidré)","2025-10-02":"Kippour",
-    "2026-04-01":"Veille de Pessah (Seder)","2026-04-02":"Pessah (J1)",
-    "2026-09-11":"Veille de Roch Hachana","2026-09-12":"Roch Hachana","2026-09-13":"Roch Hachana (J2)",
-    "2026-09-20":"Veille de Kippour (Kol Nidré)","2026-09-21":"Kippour",
-    "2025-12-15":"Hanouka (1er jour)","2025-12-22":"Hanouka (Dernier jour)",
-    "2026-03-03":"Pourim","2026-10-03":"Shmini 'Atsérêt"
+    "2025-04-12":"Pessah (1er soir, Seder)","2025-04-13":"Pessah (2e soir)",
+    "2025-09-22":"Roch Hachana (1re nuitée)","2025-09-23":"Roch Hachana (2e nuitée)",
+    "2025-10-01":"Kippour (nuit de Kol Nidré)",
+    "2025-12-14":"Hanouka 1er jour (nuitée)","2025-12-21":"Hanouka dernier jour (nuitée)",
+    "2026-03-02":"Pourim (nuitée)",
+    "2026-04-01":"Pessah (1er soir, Seder)","2026-04-02":"Pessah (2e soir)",
+    "2026-09-11":"Roch Hachana (1re nuitée)","2026-09-12":"Roch Hachana (2e nuitée)",
+    "2026-09-20":"Kippour (nuit de Kol Nidré)",
+    "2026-10-02":"Shmini 'Atsérêt (nuitée)",
+    "2026-12-04":"Hanouka 1er jour (nuitée)","2026-12-11":"Hanouka dernier jour (nuitée)"
 };
 
 function getMothersDay(yr){
@@ -447,8 +452,10 @@ function getCustody(date){
         return {who: who, why: `Vendredi férié (anticipe le week-end)${relText}`, ferie:true, rel: isRel, vac: isVac};
     }
     if(dow===4 && ph.has(ds)) {
-        const who = isEvenWk ? "Papa" : "Maman";
-        return {who: who, why: `Jeudi férié (pont avec le week-end)${relText}`, ferie:true, rel: isRel, vac: isVac};
+        // Clause des jugements : tout férié contigu à une période de DVH s'y ajoute.
+        // Semaine paire : pont avec le week-end Papa. Semaine impaire : prolonge la nuit du mercredi Papa.
+        const why = isEvenWk ? `Jeudi férié (pont avec le week-end)${relText}` : `Jeudi férié (prolonge la nuit du mercredi)${relText}`;
+        return {who: "Papa", why: why, ferie:true, rel: isRel, vac: isVac};
     }
     if(dow===5 && ph.has(yesterdayDS)) {
         const who = isEvenWk ? "Papa" : "Maman";
@@ -790,33 +797,42 @@ async function syncHebcal(){
             data.items.forEach(item=>{
                 const orig=item.title_orig||item.title||'';const ds=item.date;if(!ds)return;
                 
-                // Filtre robuste : Hebcal nomme le J1 « Rosh Hashana 5787 » (avec l'année hébraïque).
-                // La regex matche « Rosh Hashana » avec ou sans année, mais exclut
-                // « Rosh Hashana II » et « Rosh Hashana LaBehemot ».
-                if(/^Rosh Hashana( \d+)?$/.test(orig)) {
-                    newRel[ds] = 'Roch Hachana';
-                }
+                /* CONVENTION NUITÉE (calendrier hébraïque) :
+                   une fête commence la veille au soir ; la date marquée = la nuit
+                   que Gabriel passe chez le parent de la fête. On marque donc de la
+                   veille (Erev) à l'avant-dernier jour civil de la fête inclus.
+                   NB : Hebcal nomme le J1 de Roch Hachana « Rosh Hashana 5787 »
+                   (avec l'année) ; la regex l'accepte mais exclut « Rosh Hashana II »
+                   et « Rosh Hashana LaBehemot ». */
                 if(orig === 'Erev Rosh Hashana') {
-                    newRel[ds] = 'Veille de Roch Hachana';
+                    newRel[ds] = 'Roch Hachana (1re nuitée)';
                 }
-                if(orig === 'Rosh Hashana II' || orig === 'Rosh Hashana 2') {
-                    newRel[ds] = 'Roch Hachana (J2)';
+                if(/^Rosh Hashana( \d+)?$/.test(orig)) {
+                    newRel[ds] = 'Roch Hachana (2e nuitée)';
                 }
+                // (Rosh Hashana II = jour de sortie de fête : la nuit suivante est chez l'autre parent, non marquée)
                 if(orig==='Yom Kippur') {
-                    newRel[ds]='Kippour';
                     const d1=s2d(ds); d1.setDate(d1.getDate()-1);
-                    newRel[d2s(d1)]='Veille de Kippour (Kol Nidré)';
+                    newRel[d2s(d1)]='Kippour (nuit de Kol Nidré)';
+                    // (le jeûne s'achève à la tombée de la nuit : pas de nuitée le soir même)
                 }
-                if(orig==='Pourim' || orig==='Purim') newRel[ds]='Pourim';
+                if(orig==='Purim') {
+                    const d1=s2d(ds); d1.setDate(d1.getDate()-1);
+                    newRel[d2s(d1)]='Pourim (nuitée)';
+                }
+                if(orig==='Erev Pesach') {
+                    newRel[ds]='Pessah (1er soir, Seder)';
+                }
                 if(orig==='Pesach I') {
-                    newRel[ds]='Pessah (J1)';
-                    const d1=s2d(ds); d1.setDate(d1.getDate()-1);
-                    newRel[d2s(d1)]='Veille de Pessah (Seder)';
+                    newRel[ds]='Pessah (2e soir)';
                 }
-                // (Pesach II retiré de la logique automatique selon le jugement)
-                if(orig==='Shmini Atzeret') newRel[ds]="Shmini 'Atsérêt";
-                if(orig==='Chanukah: 1 Candle' || orig==='Chanukah: 1st Day'){const d1=s2d(ds);d1.setDate(d1.getDate()+1);newRel[d2s(d1)]='Hanouka (1er jour)'}
-                if(orig==='Chanukah: 8th Day') newRel[ds]='Hanouka (Dernier jour)';
+                // (Pesach II et suivants : hors dispositif — seuls les deux premiers soirs sont accordés)
+                if(orig==='Shmini Atzeret') {
+                    const d1=s2d(ds); d1.setDate(d1.getDate()-1);
+                    newRel[d2s(d1)]="Shmini 'Atsérêt (nuitée)";
+                }
+                if(orig==='Chanukah: 1 Candle') newRel[ds]='Hanouka 1er jour (nuitée)';
+                if(orig==='Chanukah: 8 Candles') newRel[ds]='Hanouka dernier jour (nuitée)';
             });
         }
         if(Object.keys(newRel).length>5){
