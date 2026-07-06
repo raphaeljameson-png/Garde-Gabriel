@@ -110,7 +110,7 @@
 <div class="app">
     <div id="v-today" class="view on">
         <h1>Aujourd'hui</h1>
-        <div class="version-tag">v2.12 — Correction Roch Hachana (Filtre Strict)</div>
+        <div class="version-tag">v2.13 — Correction Roch Hachana (titre Hebcal avec année)</div>
         <div class="hero">
             <div class="hero-date" id="t-date"></div>
             <div class="circle" id="t-circle"></div>
@@ -216,7 +216,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebas
 import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 /* ═══════════════════════════════════════════════════════
-   GARDE GABRIEL — V2.12 (Filtre Hebcal Strict)
+   GARDE GABRIEL — V2.13 (Fix titre Hebcal « Rosh Hashana 5787 »)
    ═══════════════════════════════════════════════════════ */
 
 // --- GESTION DES DROITS (LIEN MAGIQUE) ---
@@ -231,9 +231,9 @@ if(!isAdmin) {
     document.getElementById('btn-force').style.display = 'none';
 }
 
-if(localStorage.getItem('app_version')!=='v28'){
+if(localStorage.getItem('app_version')!=='v29'){
     ['gabriel_school_holidays','gabriel_religious_holidays','gabriel_last_sync'].forEach(k=>localStorage.removeItem(k));
-    localStorage.setItem('app_version','v28');
+    localStorage.setItem('app_version','v29');
 }
 
 let exceptions=JSON.parse(localStorage.getItem('gabriel_exceptions')||'{}');
@@ -790,11 +790,14 @@ async function syncHebcal(){
             data.items.forEach(item=>{
                 const orig=item.title_orig||item.title||'';const ds=item.date;if(!ds)return;
                 
-                // Filtre STRICT pour ignorer les "Rosh Hashana LaBehemot" etc.
-                if(orig === 'Rosh Hashana' || orig === 'Rosh Hashana I' || orig === 'Rosh Hashana 1') {
+                // Filtre robuste : Hebcal nomme le J1 « Rosh Hashana 5787 » (avec l'année hébraïque).
+                // La regex matche « Rosh Hashana » avec ou sans année, mais exclut
+                // « Rosh Hashana II » et « Rosh Hashana LaBehemot ».
+                if(/^Rosh Hashana( \d+)?$/.test(orig)) {
                     newRel[ds] = 'Roch Hachana';
-                    const d1=s2d(ds); d1.setDate(d1.getDate()-1);
-                    newRel[d2s(d1)] = 'Veille de Roch Hachana';
+                }
+                if(orig === 'Erev Rosh Hashana') {
+                    newRel[ds] = 'Veille de Roch Hachana';
                 }
                 if(orig === 'Rosh Hashana II' || orig === 'Rosh Hashana 2') {
                     newRel[ds] = 'Roch Hachana (J2)';
