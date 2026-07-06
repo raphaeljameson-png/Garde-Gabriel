@@ -110,7 +110,7 @@
 <div class="app">
     <div id="v-today" class="view on">
         <h1>Aujourd'hui</h1>
-        <div class="version-tag">v2.14 — Fêtes juives en nuitées (calendrier hébraïque) + jeudis fériés</div>
+        <div class="version-tag">v2.15 — Import calendrier scolaire officiel + fériés</div>
         <div class="hero">
             <div class="hero-date" id="t-date"></div>
             <div class="circle" id="t-circle"></div>
@@ -141,7 +141,7 @@
             <span class="leg"><span class="ldot" style="background:var(--maman)"></span>Maman</span>
             <span class="leg"><span class="ldot" style="background:var(--exception)"></span>Modifié</span>
             <span class="leg"><span class="ldot" style="border:2px solid var(--religious);background:transparent"></span>Fête juive</span>
-            <span class="leg"><span class="ldot" style="border:2px solid var(--ferie);background:transparent"></span>Férié étendu</span>
+            <span class="leg"><span class="ldot" style="border:2px solid var(--ferie);background:transparent"></span>Jour férié</span>
             <span class="leg"><span style="text-decoration:underline;text-underline-offset:2px">Vacances</span></span>
         </div>
     </div>
@@ -162,6 +162,7 @@
             <span class="leg"><span class="ldot" style="background:var(--maman)"></span>Maman</span>
             <span class="leg"><span class="ldot" style="background:var(--exception)"></span>Modifié</span>
             <span class="leg"><span class="ldot" style="border:2px solid var(--religious);background:transparent"></span>Fête juive</span>
+            <span class="leg"><span class="ldot" style="border:2px solid var(--ferie);background:transparent"></span>Jour férié</span>
             <span class="leg"><span style="text-decoration:underline;text-underline-offset:2px">Vacances</span></span>
         </div>
         <div class="btn-row">
@@ -216,10 +217,12 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebas
 import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 /* ═══════════════════════════════════════════════════════
-   GARDE GABRIEL — V2.14 (Fêtes juives en nuitées + jeudis fériés)
+   GARDE GABRIEL — V2.15 (Import calendrier scolaire officiel + fériés)
    Convention : un jour marqué = la NUIT que Gabriel passe chez ce parent.
    Une fête hébraïque commence la veille au soir : on marque chaque nuit
    contenue dans la fête (de la veille à l'avant-dernier jour civil inclus).
+   Vacances scolaires : synchronisées depuis data.education.gouv.fr (Zone C),
+   les dates de secours locales ne servent que pour les années non publiées.
    ═══════════════════════════════════════════════════════ */
 
 // --- GESTION DES DROITS (LIEN MAGIQUE) ---
@@ -234,9 +237,9 @@ if(!isAdmin) {
     document.getElementById('btn-force').style.display = 'none';
 }
 
-if(localStorage.getItem('app_version')!=='v30'){
-    ['gabriel_school_holidays','gabriel_religious_holidays','gabriel_last_sync'].forEach(k=>localStorage.removeItem(k));
-    localStorage.setItem('app_version','v30');
+if(localStorage.getItem('app_version')!=='v31'){
+    ['gabriel_school_holidays','gabriel_religious_holidays','gabriel_last_sync','gabriel_pont_ranges','gabriel_school_last_sync'].forEach(k=>localStorage.removeItem(k));
+    localStorage.setItem('app_version','v31');
 }
 
 let exceptions=JSON.parse(localStorage.getItem('gabriel_exceptions')||'{}');
@@ -281,8 +284,11 @@ const saveEx=()=> {
 const d2s=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 const s2d=s=>{const[y,m,j]=s.split('-').map(Number);return new Date(y,m-1,j,12,0,0)};
 
-/* ── VACANCES SCOLAIRES Zone C ── */
-let schoolHols=JSON.parse(localStorage.getItem('gabriel_school_holidays')||'null')||[
+/* ── VACANCES SCOLAIRES Zone C — dates de secours locales.
+   L'import officiel (syncSchoolCal) remplace ces valeurs pour toutes les années publiées.
+   2024-2025 à 2026-2027 : conformes à l'arrêté officiel (vérifié le 6.07.2026).
+   2027-2028 à 2029-2030 : PRÉVISIONNEL — non publié, à confirmer par l'import. ── */
+const DEFAULT_SCHOOL_HOLS=[
     {n:"Toussaint",s:"2024-10-19",e:"2024-11-03",mid:"2024-10-26"},
     {n:"Noël",s:"2024-12-21",e:"2025-01-05",mid:"2024-12-28"},
     {n:"Hiver",s:"2025-02-15",e:"2025-03-02",mid:"2025-02-22"},
@@ -295,9 +301,9 @@ let schoolHols=JSON.parse(localStorage.getItem('gabriel_school_holidays')||'null
     {n:"Été",s:"2026-07-04",e:"2026-08-31",summer:true},
     {n:"Toussaint",s:"2026-10-17",e:"2026-11-01",mid:"2026-10-24"},
     {n:"Noël",s:"2026-12-19",e:"2027-01-03",mid:"2026-12-26"},
-    {n:"Hiver",s:"2027-02-20",e:"2027-03-07",mid:"2027-02-27"},
-    {n:"Printemps",s:"2027-04-17",e:"2027-05-02",mid:"2027-04-24"},
-    {n:"Été",s:"2027-07-06",e:"2027-08-31",summer:true},
+    {n:"Hiver",s:"2027-02-06",e:"2027-02-21",mid:"2027-02-13"},
+    {n:"Printemps",s:"2027-04-03",e:"2027-04-18",mid:"2027-04-10"},
+    {n:"Été",s:"2027-07-03",e:"2027-08-31",summer:true},
     {n:"Toussaint",s:"2027-10-23",e:"2027-11-07",mid:"2027-10-30"},
     {n:"Noël",s:"2027-12-18",e:"2028-01-02",mid:"2027-12-25"},
     {n:"Hiver",s:"2028-02-19",e:"2028-03-05",mid:"2028-02-26"},
@@ -314,6 +320,8 @@ let schoolHols=JSON.parse(localStorage.getItem('gabriel_school_holidays')||'null
     {n:"Printemps",s:"2030-04-20",e:"2030-05-05",mid:"2030-04-27"},
     {n:"Été",s:"2030-07-06",e:"2030-08-31",summer:true}
 ];
+let schoolHols=JSON.parse(localStorage.getItem('gabriel_school_holidays')||'null')||DEFAULT_SCHOOL_HOLS;
+let pontRanges=JSON.parse(localStorage.getItem('gabriel_pont_ranges')||'null')||[];
 
 /* ── FÊTES JUIVES DURES (convention nuitée : la date marquée = la nuit chez le parent de la fête) ── */
 let relHols=JSON.parse(localStorage.getItem('gabriel_religious_holidays')||'null')||{
@@ -368,6 +376,15 @@ function isoWeek(date){
     tmp.setUTCDate(tmp.getUTCDate()+4-dayN);
     const yearStart=new Date(Date.UTC(tmp.getUTCFullYear(),0,1));
     return Math.ceil((((tmp-yearStart)/86400000)+1)/7);
+}
+
+/* Pont après un jeudi férié : vrai si le vendredi est officiellement vaqué (données
+   data.education.gouv.fr). Si l'année n'est pas couverte par les données, on garde
+   le comportement historique (pont présumé). Ex. 2027 : pont limité au jeudi 6 mai,
+   école le vendredi 7 → pas d'attribution du vendredi. */
+function isPontVaque(ds){
+    if(pontRanges.some(p=>ds>=p.s&&ds<=p.e)) return true;
+    return !pontRanges.some(p=>p.s.slice(0,4)===ds.slice(0,4));
 }
 
 function getCustody(date){
@@ -457,7 +474,7 @@ function getCustody(date){
         const why = isEvenWk ? `Jeudi férié (pont avec le week-end)${relText}` : `Jeudi férié (prolonge la nuit du mercredi)${relText}`;
         return {who: "Papa", why: why, ferie:true, rel: isRel, vac: isVac};
     }
-    if(dow===5 && ph.has(yesterdayDS)) {
+    if(dow===5 && ph.has(yesterdayDS) && isPontVaque(ds)) {
         const who = isEvenWk ? "Papa" : "Maman";
         return {who: who, why: `Pont du vendredi${relText}`, ferie:true, rel: isRel, vac: isVac};
     }
@@ -513,7 +530,7 @@ function renderCal(){
         if(ds===todayS)cls+=' today';
         if(c.forced)cls+=' exc';
         if(c.rel)cls+=' rel';
-        if(c.ferie)cls+=' fer';
+        if(c.ferie || getFerieName(ds))cls+=' fer';
         if(c.vac)cls+=' vac';
         g.innerHTML+=`<div class="${cls}" onclick="toggleDay('${ds}')">${d}</div>`;
 
@@ -556,7 +573,7 @@ function renderYear(){
             if(ds===todayS)cls+=' today';
             if(c.forced)cls+=' exc';
             if(c.rel)cls+=' rel';
-            if(c.ferie)cls+=' fer';
+            if(c.ferie || getFerieName(ds))cls+=' fer';
             if(c.vac)cls+=' vac';
             html+=`<div class="${cls}" onclick="toggleDay('${ds}')">${d}</div>`;
         }
@@ -843,6 +860,50 @@ async function syncHebcal(){
     }catch(e){document.getElementById('sync-lbl').textContent='Hors-ligne'}
 }
 
+/* ── IMPORT AUTO DU CALENDRIER SCOLAIRE ZONE C (data.education.gouv.fr) ──
+   Source officielle : dataset fr-en-calendrier-scolaire, zone C / académie de Paris.
+   Convention API : start_date = vendredi (fin des cours), end_date = veille de la reprise.
+   Convention app : s = 1er samedi (la nuit du vendredi est déjà gérée par firstNight),
+   e = veille de la reprise, mid = samedi du milieu (s + 7).
+   L'API prime ; les dates de secours locales ne servent que pour les années non publiées. */
+async function syncSchoolCal(){
+    const last=localStorage.getItem('gabriel_school_last_sync');const now=Date.now();
+    if(last&&now-last<7*24*3600*1000) return;
+    try{
+        const url="https://data.education.gouv.fr/api/explore/v2.1/catalog/datasets/fr-en-calendrier-scolaire/records?"
+            +"where="+encodeURIComponent('zones="Zone C" and location="Paris" and start_date>="2024-08-01"')
+            +"&select=description,start_date,end_date,population&order_by=start_date&limit=60";
+        const res=await fetch(url);
+        const data=await res.json();
+        if(!data.results||!data.results.length) return;
+        const plusJ=(x,n)=>{const d=s2d(x);d.setDate(d.getDate()+n);return d2s(d)};
+        const api=[],ponts=[];
+        data.results.forEach(r=>{
+            if(r.population==='Enseignants') return; // dates élèves uniquement
+            const desc=r.description||'',sd=(r.start_date||'').slice(0,10),ed=(r.end_date||'').slice(0,10);
+            if(!sd) return;
+            if(desc.indexOf('Pont')===0){ ponts.push({s:sd,e:ed||sd}); return; }
+            if(desc==="Début des Vacances d'Été"){ api.push({n:"Été",s:plusJ(sd,1),e:sd.slice(0,4)+"-08-31",summer:true,prov:true}); return; }
+            if(desc==="Vacances d'Été"){ api.push({n:"Été",s:plusJ(sd,1),e:ed,summer:true}); return; }
+            const m=desc.match(/Toussaint|Noël|Hiver|Printemps/);
+            if(m&&ed){ const s=plusJ(sd,1); api.push({n:m[0],s:s,e:ed,mid:plusJ(s,7)}); }
+        });
+        // si l'entrée complète « Vacances d'Été » existe, elle remplace le « Début » provisoire
+        const clean=api.filter(a=>!a.prov||!api.some(b=>b.n==="Été"&&!b.prov&&Math.abs(s2d(b.s)-s2d(a.s))<45*86400000));
+        if(clean.length<4) return; // réponse anormale : on ne touche à rien
+        // Fusion : l'API officielle prime ; le secours ne sert que pour les années non encore publiées
+        const covered=h=>clean.some(a=>a.n===h.n&&Math.abs(s2d(a.s)-s2d(h.s))<45*86400000);
+        const merged=clean.concat(DEFAULT_SCHOOL_HOLS.filter(h=>!covered(h))).sort((a,b)=>a.s.localeCompare(b.s));
+        schoolHols=merged; pontRanges=ponts;
+        localStorage.setItem('gabriel_school_holidays',JSON.stringify(merged));
+        localStorage.setItem('gabriel_pont_ranges',JSON.stringify(ponts));
+        localStorage.setItem('gabriel_school_last_sync',String(now));
+        const lbl=document.getElementById('sync-lbl');
+        if(lbl) lbl.textContent='Synchronisé (HebCal + calendrier scolaire officiel) ✓';
+        renderAll();
+    }catch(e){/* hors-ligne : dates locales conservées */}
+}
+
 window.forceToday = forceToday;
 window.chMonth = chMonth;
 window.goToday = goToday;
@@ -855,7 +916,7 @@ window.exportDirectJSON = exportDirectJSON;
 window.exportICS = exportICS;
 window.sw = sw;
 
-renderAll();setTimeout(syncHebcal,2000);
+renderAll();setTimeout(syncHebcal,2000);setTimeout(syncSchoolCal,2500);
 </script>
 </body>
 </html>
