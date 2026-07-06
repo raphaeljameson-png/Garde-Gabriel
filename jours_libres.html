@@ -175,13 +175,13 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-/* ═══════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════
    NOS JOURS LIBRES — V1.0
    Croisement Gabriel (Raphaël) + Pierre & Élise (Marion)
    
    LIBRE = Gabriel chez Maman (pas chez Raphaël)
         ET Pierre & Élise chez Papa/Julien (pas chez Marion)
-   ═══════════════════════════════════════════════════════ */
+   ═══════════════════════════════════════════════════ */
 
 const d2s = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 const s2d = s => { const [y,m,j] = s.split('-').map(Number); return new Date(y, m-1, j, 12, 0, 0) };
@@ -542,7 +542,10 @@ async function syncHebcal(){
             const data=await res.json();if(!data.items)continue;
             data.items.forEach(item=>{
                 const orig=item.title_orig||item.title||'';const ds=item.date;if(!ds)return;
-                if(orig==='Rosh Hashana'||orig==='Rosh Hashana I'||orig==='Rosh Hashana 1'){newRel[ds]='Roch Hachana';const d1=s2d(ds);d1.setDate(d1.getDate()-1);newRel[d2s(d1)]='Veille Roch Hachana'}
+                // Fix : Hebcal nomme le J1 « Rosh Hashana 5787 » (avec l'année) ; la regex l'accepte
+                // mais exclut « Rosh Hashana II » et « Rosh Hashana LaBehemot ».
+                if(/^Rosh Hashana( \d+)?$/.test(orig)) newRel[ds]='Roch Hachana';
+                if(orig==='Erev Rosh Hashana') newRel[ds]='Veille Roch Hachana';
                 if(orig==='Rosh Hashana II'||orig==='Rosh Hashana 2') newRel[ds]='Roch Hachana J2';
                 if(orig==='Yom Kippur'){newRel[ds]='Kippour';const d1=s2d(ds);d1.setDate(d1.getDate()-1);newRel[d2s(d1)]='Kol Nidré'}
                 if(orig==='Pourim'||orig==='Purim') newRel[ds]='Pourim';
