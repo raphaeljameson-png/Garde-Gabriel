@@ -110,7 +110,7 @@
 <div class="app">
     <div id="v-today" class="view on">
         <h1>Aujourd'hui</h1>
-        <div class="version-tag">v2.15 — Import calendrier scolaire officiel + fériés</div>
+        <div class="version-tag">v2.16 — Passages d'été toujours le samedi (blocs 14 j flexibles)</div>
         <div class="hero">
             <div class="hero-date" id="t-date"></div>
             <div class="circle" id="t-circle"></div>
@@ -217,12 +217,12 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebas
 import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 /* ═══════════════════════════════════════════════════════
-   GARDE GABRIEL — V2.15 (Import calendrier scolaire officiel + fériés)
+   GARDE GABRIEL — V2.16 (Passages d'été toujours le samedi)
    Convention : un jour marqué = la NUIT que Gabriel passe chez ce parent.
-   Une fête hébraïque commence la veille au soir : on marque chaque nuit
-   contenue dans la fête (de la veille à l'avant-dernier jour civil inclus).
-   Vacances scolaires : synchronisées depuis data.education.gouv.fr (Zone C),
-   les dates de secours locales ne servent que pour les années non publiées.
+   Fêtes hébraïques : entrée la veille au soir, marquage des nuits contenues
+   dans la fête. Vacances scolaires : synchronisées depuis data.education.gouv.fr
+   (Zone C). Été : blocs de 14 jours ancrés sur le premier samedi des vacances,
+   passages de bras toujours le samedi (1er bloc flexible).
    ═══════════════════════════════════════════════════════ */
 
 // --- GESTION DES DROITS (LIEN MAGIQUE) ---
@@ -425,9 +425,14 @@ function getCustody(date){
         const isEvenYear=(startYear%2===0);
 
         if(h.summer){
-            const sat2 = new Date(startH); sat2.setDate(sat2.getDate() + 14);
-            const sat3 = new Date(startH); sat3.setDate(sat3.getDate() + 28);
-            const sat4 = new Date(startH); sat4.setDate(sat4.getDate() + 42);
+            /* Passages de bras d'été TOUJOURS le samedi : blocs de 14 jours ancrés sur
+               le premier samedi des vacances. Si la fin des cours ne tombe pas un
+               vendredi, le 1er bloc absorbe les jours d'écart (règle « flexible »). */
+            const anchor = new Date(startH);
+            while(anchor.getDay() !== 6) anchor.setDate(anchor.getDate() + 1);
+            const sat2 = new Date(anchor); sat2.setDate(anchor.getDate() + 14);
+            const sat3 = new Date(anchor); sat3.setDate(anchor.getDate() + 28);
+            const sat4 = new Date(anchor); sat4.setDate(anchor.getDate() + 42);
 
             let block = 0;
             if (t >= sat4.getTime()) block = 3;
