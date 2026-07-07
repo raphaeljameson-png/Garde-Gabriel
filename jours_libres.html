@@ -103,7 +103,7 @@
     <!-- ══ ACCUEIL ══ -->
     <div id="v-home" class="view on">
         <h1>Nos Jours Libres</h1>
-        <div class="subtitle">Raphaël & Marion — sans enfants ❤️</div>
+        <div class="subtitle">Raphaël & Marion — sans enfants ❤️ · v2.0 moteur commun</div>
         <div class="hero">
             <div class="hero-big">🥂</div>
             <div class="hero-count" id="h-count">—</div>
@@ -174,89 +174,24 @@
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { getCustody, d2s, s2d, isoWeek, getPH, getMothersDay, getFathersDay, computeEaster, state, setExceptions, syncHebcal, syncSchoolCal } from './garde-engine.js';
 
-/* ═══════════════════════════════════════════════════
-   NOS JOURS LIBRES — V1.0
+/* ═════════════════════════════════════════════════
+   NOS JOURS LIBRES — V2.0 (moteur Gabriel partagé : garde-engine.js)
    Croisement Gabriel (Raphaël) + Pierre & Élise (Marion)
-   
+
    LIBRE = Gabriel chez Maman (pas chez Raphaël)
         ET Pierre & Élise chez Papa/Julien (pas chez Marion)
-   ═══════════════════════════════════════════════════ */
 
-const d2s = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-const s2d = s => { const [y,m,j] = s.split('-').map(Number); return new Date(y, m-1, j, 12, 0, 0) };
+   Le côté Gabriel n'est PLUS recalculé ici : il vient de garde-engine.js,
+   la même source de vérité que la page index (nuitées hébraïques, import
+   du calendrier scolaire officiel, fériés, blocs d'été ancrés samedi).
+   ═════════════════════════════════════════════════ */
 
-function computeEaster(year) {
-    const a=year%19,b=Math.floor(year/100),c=year%100,d=Math.floor(b/4),e=b%4,
-          f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30,
-          i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451),
-          mo=Math.floor((h+l-7*m+114)/31),da=((h+l-7*m+114)%31)+1;
-    return new Date(year, mo-1, da, 12, 0, 0);
-}
-function getMothersDay(yr) {
-    let f = new Date(yr,4,31,12); while(f.getDay()!==0) f.setDate(f.getDate()-1);
-    const e=computeEaster(yr),p=new Date(e);p.setDate(e.getDate()+49);
-    if(d2s(f)===d2s(p)) f.setDate(f.getDate()+7); return d2s(f);
-}
-function getFathersDay(yr) {
-    const f=new Date(yr,5,1,12);let s=0;while(s<3){if(f.getDay()===0)s++;if(s<3)f.setDate(f.getDate()+1)}return d2s(f);
-}
-function getPH(year) {
-    const e=computeEaster(year),add=n=>{const x=new Date(e);x.setDate(x.getDate()+n);return d2s(x)};
-    return new Set([`${year}-01-01`,`${year}-05-01`,`${year}-05-08`,`${year}-07-14`,`${year}-08-15`,`${year}-11-01`,`${year}-11-11`,`${year}-12-25`,add(1),add(39),add(50)]);
-}
-function getAscDS(yr){const e=computeEaster(yr),a=new Date(e);a.setDate(e.getDate()+39);return d2s(a)}
-function getEMDS(yr){const e=computeEaster(yr),m=new Date(e);m.setDate(e.getDate()+1);return d2s(m)}
-function isoWeek(date){const t=new Date(Date.UTC(date.getFullYear(),date.getMonth(),date.getDate()));const d=t.getUTCDay()||7;t.setUTCDate(t.getUTCDate()+4-d);const y=new Date(Date.UTC(t.getUTCFullYear(),0,1));return Math.ceil((((t-y)/86400000)+1)/7)}
-
-/* ── VACANCES Zone C (partagées) ── */
-const schoolHols = [
-    {n:"Toussaint",s:"2024-10-19",e:"2024-11-03",mid:"2024-10-26"},
-    {n:"Noël",s:"2024-12-21",e:"2025-01-05",mid:"2024-12-28"},
-    {n:"Hiver",s:"2025-02-15",e:"2025-03-02",mid:"2025-02-22"},
-    {n:"Printemps",s:"2025-04-12",e:"2025-04-27",mid:"2025-04-19"},
-    {n:"Été",s:"2025-07-05",e:"2025-08-31",summer:true},
-    {n:"Toussaint",s:"2025-10-18",e:"2025-11-02",mid:"2025-10-25"},
-    {n:"Noël",s:"2025-12-20",e:"2026-01-04",mid:"2025-12-27"},
-    {n:"Hiver",s:"2026-02-21",e:"2026-03-08",mid:"2026-02-28"},
-    {n:"Printemps",s:"2026-04-18",e:"2026-05-03",mid:"2026-04-25"},
-    {n:"Été",s:"2026-07-04",e:"2026-08-31",summer:true},
-    {n:"Toussaint",s:"2026-10-17",e:"2026-11-01",mid:"2026-10-24"},
-    {n:"Noël",s:"2026-12-19",e:"2027-01-03",mid:"2026-12-26"},
-    {n:"Hiver",s:"2027-02-20",e:"2027-03-07",mid:"2027-02-27"},
-    {n:"Printemps",s:"2027-04-17",e:"2027-05-02",mid:"2027-04-24"},
-    {n:"Été",s:"2027-07-06",e:"2027-08-31",summer:true},
-    {n:"Toussaint",s:"2027-10-23",e:"2027-11-07",mid:"2027-10-30"},
-    {n:"Noël",s:"2027-12-18",e:"2028-01-02",mid:"2027-12-25"},
-    {n:"Hiver",s:"2028-02-19",e:"2028-03-05",mid:"2028-02-26"},
-    {n:"Printemps",s:"2028-04-15",e:"2028-04-30",mid:"2028-04-22"},
-    {n:"Été",s:"2028-07-06",e:"2028-08-31",summer:true},
-    {n:"Toussaint",s:"2028-10-21",e:"2028-11-05",mid:"2028-10-28"},
-    {n:"Noël",s:"2028-12-23",e:"2029-01-07",mid:"2028-12-30"},
-    {n:"Hiver",s:"2029-02-17",e:"2029-03-04",mid:"2029-02-24"},
-    {n:"Printemps",s:"2029-04-14",e:"2029-04-29",mid:"2029-04-21"},
-    {n:"Été",s:"2029-07-06",e:"2029-08-31",summer:true},
-    {n:"Toussaint",s:"2029-10-20",e:"2029-11-04",mid:"2029-10-27"},
-    {n:"Noël",s:"2029-12-22",e:"2030-01-06",mid:"2029-12-29"},
-    {n:"Hiver",s:"2030-02-23",e:"2030-03-10",mid:"2030-03-02"},
-    {n:"Printemps",s:"2030-04-20",e:"2030-05-05",mid:"2030-04-27"},
-    {n:"Été",s:"2030-07-06",e:"2030-08-31",summer:true}
-];
-
-/* ── FÊTES JUIVES (Gabriel) ── */
-let relHols = {
-    "2025-04-12":"Veille de Pessah","2025-04-13":"Pessah (J1)",
-    "2025-09-22":"Veille de Roch Hachana","2025-09-23":"Roch Hachana","2025-09-24":"Roch Hachana (J2)",
-    "2025-10-01":"Veille de Kippour","2025-10-02":"Kippour",
-    "2026-04-01":"Veille de Pessah","2026-04-02":"Pessah (J1)",
-    "2026-09-11":"Veille de Roch Hachana","2026-09-12":"Roch Hachana","2026-09-13":"Roch Hachana (J2)",
-    "2026-09-20":"Veille de Kippour","2026-09-21":"Kippour",
-    "2025-12-15":"Hanouka (1er)","2025-12-22":"Hanouka (Dernier)",
-    "2026-03-03":"Pourim","2026-10-03":"Shmini Atseret"
-};
+const getAscDS=yr=>{const e=computeEaster(yr),a=new Date(e);a.setDate(e.getDate()+39);return d2s(a)};
+const getEMDS=yr=>{const e=computeEaster(yr),m=new Date(e);m.setDate(e.getDate()+1);return d2s(m)};
 
 /* ── FIREBASE — Exceptions des deux calendriers ── */
-let exGabriel = {};
 let exEP = {};
 
 const firebaseConfig = {
@@ -273,7 +208,7 @@ const db = getFirestore(app);
 let synced = 0;
 
 onSnapshot(doc(db, "garde", "exceptions"), snap => {
-    if (snap.exists()) exGabriel = snap.data();
+    if (snap.exists()) setExceptions(snap.data());
     synced++; if (synced >= 2) { renderAll(); document.getElementById('sync-lbl').textContent = 'Synchronisé ⚡'; }
 });
 onSnapshot(doc(db, "garde_elise_pierre", "exceptions"), snap => {
@@ -281,70 +216,15 @@ onSnapshot(doc(db, "garde_elise_pierre", "exceptions"), snap => {
     synced++; if (synced >= 2) { renderAll(); document.getElementById('sync-lbl').textContent = 'Synchronisé ⚡'; }
 });
 
-/* ═══════════════════════════════════════════
-   ALGORITHME GABRIEL (Raphaël)
-   Résidence Maman. Papa = S paires WE + S impaires Mer soir
-   + fêtes juives + vacances alternées
-   ═══════════════════════════════════════════ */
-function getGabriel(date) {
-    const ds=d2s(date),yr=date.getFullYear(),dow=date.getDay(),t=date.getTime();
-    const weekNo=isoWeek(date),isEvenWk=(weekNo%2===0);
-
-    let isVac=false;
-    for(const h of schoolHols){const s=s2d(h.s),fn=new Date(s);fn.setDate(fn.getDate()-1);if(t>=fn.getTime()&&t<=s2d(h.e).getTime()){isVac=true;break}}
-    const ph=getPH(yr);
-
-    if(exGabriel[ds]) return exGabriel[ds];
-    if(ds===getMothersDay(yr)) return "Maman";
-    if(ds===getFathersDay(yr)) return "Papa";
-
-    // Vacances
-    for(const h of schoolHols){
-        const s=s2d(h.s),fn=new Date(s);fn.setDate(fn.getDate()-1);
-        if(t<fn.getTime()||t>s2d(h.e).getTime()) continue;
-        const sY=parseInt(h.s.split('-')[0]),isEvenY=(sY%2===0);
-        if(h.summer){
-            const sat2=new Date(s);sat2.setDate(s.getDate()+14);
-            const sat3=new Date(s);sat3.setDate(s.getDate()+28);
-            const sat4=new Date(s);sat4.setDate(s.getDate()+42);
-            let block=0;
-            if(t>=sat4.getTime())block=3;else if(t>=sat3.getTime())block=2;else if(t>=sat2.getTime())block=1;
-            const papaEven=(block===1||block===3),papaOdd=(block===0||block===2);
-            return (isEvenY?papaEven:papaOdd)?"Papa":"Maman";
-        } else {
-            const isFirst=(t<s2d(h.mid).getTime());
-            const papa=isEvenY?!isFirst:isFirst;
-            return papa?"Papa":"Maman";
-        }
-    }
-
-    // Fêtes juives
-    if(relHols[ds]) return (yr%2===0)?"Papa":"Maman";
-
-    // Fériés/ponts
-    const yesterday=new Date(date);yesterday.setDate(date.getDate()-1);const yds=d2s(yesterday);
-    if(dow===1&&ph.has(ds)) return isEvenWk?"Maman":"Papa";
-    if(dow===5&&ph.has(ds)) return isEvenWk?"Papa":"Maman";
-    if(dow===4&&ph.has(ds)) return isEvenWk?"Papa":"Maman";
-    if(dow===5&&ph.has(yds)) return isEvenWk?"Papa":"Maman";
-
-    // Normal
-    if(isEvenWk&&(dow===5||dow===6||dow===0)) return "Papa";
-    if(!isEvenWk&&dow===3) return "Papa";
-    return "Maman";
-}
-
-/* ═══════════════════════════════════════════
-   ALGORITHME PIERRE & ÉLISE (Marion)
+/* ═════════════════════════════════════════
+   ALGORITHME PIERRE & ÉLISE (Marion) — propre à cette page
    Résidence Maman. Papa = S impaires Jeu/Ven/Sam/Dim
    + vacances alternées + Noël/Ascension/Pâques spéciaux
-   ═══════════════════════════════════════════ */
+   (utilise les vacances synchronisées du moteur commun)
+   ═════════════════════════════════════════ */
 function getEP(date) {
     const ds=d2s(date),yr=date.getFullYear(),dow=date.getDay(),t=date.getTime();
     const weekNo=isoWeek(date),isOddWk=(weekNo%2!==0);
-
-    let isVac=false;
-    for(const h of schoolHols){const fn=new Date(s2d(h.s));fn.setDate(fn.getDate()-1);if(t>=fn.getTime()&&t<=s2d(h.e).getTime()){isVac=true;break}}
     const ph=getPH(yr);
 
     if(exEP[ds]) return exEP[ds];
@@ -358,8 +238,8 @@ function getEP(date) {
     const ascD=s2d(getAscDS(yr));
     for(let i=0;i<=3;i++){const x=new Date(ascD);x.setDate(ascD.getDate()+i);if(ds===d2s(x)) return "Maman"}
 
-    // Vacances
-    for(const h of schoolHols){
+    // Vacances (dates synchronisées du moteur commun)
+    for(const h of state.schoolHols){
         const fn=new Date(s2d(h.s));fn.setDate(fn.getDate()-1);
         if(t<fn.getTime()||t>s2d(h.e).getTime()) continue;
         const sY=parseInt(h.s.split('-')[0]),isOddY=(sY%2!==0);
@@ -383,16 +263,14 @@ function getEP(date) {
     return "Maman";
 }
 
-/* ═══════════════════════════════════════════
+/* ═════════════════════════════════════════
    CROISEMENT : jour libre = Gabriel chez Maman + EP chez Papa
-   Raphaël libre quand Gabriel pas chez lui = Gabriel chez Maman
-   Marion libre quand EP pas chez elle = EP chez Papa
-   ═══════════════════════════════════════════ */
+   ═════════════════════════════════════════ */
 function isFree(date) {
-    const gab = getGabriel(date);
+    const gab = getCustody(date).who;   // moteur commun (source de vérité index)
     const ep = getEP(date);
-    const raphaelFree = (gab === "Maman");  // Gabriel chez sa mère → Raphaël libre
-    const marionFree = (ep === "Papa");      // EP chez leur père → Marion libre
+    const raphaelFree = (gab === "Maman");
+    const marionFree = (ep === "Papa");
     return { free: raphaelFree && marionFree, raphaelFree, marionFree, gab, ep };
 }
 
@@ -474,7 +352,6 @@ function renderCal() {
         const f=isFree(date);
         let cls=`day ${f.free?'free':'busy'}`;
         if(ds===todayS)cls+=' today';
-        // Tooltip via title
         const tip=f.free?'Libres ❤️':`Gabriel: ${f.gab}, EP: ${f.ep}`;
         g.innerHTML+=`<div class="${cls}" title="${tip}">${d}</div>`;
     }
@@ -530,35 +407,12 @@ function renderAll(){renderHome();renderCal();renderYear();renderStats()}
 
 window.chMonth=chMonth;window.goToday=goToday;window.chYear=chYear;window.goYear=goYear;window.sw=sw;
 
-// Initial render (avant Firebase, avec exceptions vides)
+// Rendu initial (avant Firebase, avec exceptions vides)
 renderAll();
 
-// Sync HebCal pour Gabriel (fêtes juives)
-async function syncHebcal(){
-    try{
-        const curYr=new Date().getFullYear();const newRel={};
-        for(const yr of[curYr,curYr+1,curYr+2,curYr+3,curYr+4,curYr+5]){
-            const res=await fetch(`https://www.hebcal.com/hebcal?v=1&cfg=json&maj=on&min=on&year=${yr}`);
-            const data=await res.json();if(!data.items)continue;
-            data.items.forEach(item=>{
-                const orig=item.title_orig||item.title||'';const ds=item.date;if(!ds)return;
-                // Fix : Hebcal nomme le J1 « Rosh Hashana 5787 » (avec l'année) ; la regex l'accepte
-                // mais exclut « Rosh Hashana II » et « Rosh Hashana LaBehemot ».
-                if(/^Rosh Hashana( \d+)?$/.test(orig)) newRel[ds]='Roch Hachana';
-                if(orig==='Erev Rosh Hashana') newRel[ds]='Veille Roch Hachana';
-                if(orig==='Rosh Hashana II'||orig==='Rosh Hashana 2') newRel[ds]='Roch Hachana J2';
-                if(orig==='Yom Kippur'){newRel[ds]='Kippour';const d1=s2d(ds);d1.setDate(d1.getDate()-1);newRel[d2s(d1)]='Kol Nidré'}
-                if(orig==='Pourim'||orig==='Purim') newRel[ds]='Pourim';
-                if(orig==='Pesach I'){newRel[ds]='Pessah J1';const d1=s2d(ds);d1.setDate(d1.getDate()-1);newRel[d2s(d1)]='Seder'}
-                if(orig==='Shmini Atzeret') newRel[ds]='Shmini Atseret';
-                if(orig==='Chanukah: 1 Candle'||orig==='Chanukah: 1st Day'){const d1=s2d(ds);d1.setDate(d1.getDate()+1);newRel[d2s(d1)]='Hanouka 1er'}
-                if(orig==='Chanukah: 8th Day') newRel[ds]='Hanouka Dernier';
-            });
-        }
-        if(Object.keys(newRel).length>5){relHols=newRel;renderAll()}
-    }catch(e){}
-}
-setTimeout(syncHebcal,3000);
+// Synchronisations du moteur commun (fêtes juives + calendrier scolaire officiel)
+setTimeout(async()=>{if(await syncHebcal()==='updated')renderAll()},3000);
+setTimeout(async()=>{if(await syncSchoolCal()==='updated')renderAll()},3500);
 </script>
 </body>
 </html>
