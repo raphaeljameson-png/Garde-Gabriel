@@ -110,7 +110,7 @@
 <div class="app">
     <div id="v-today" class="view on">
         <h1>Aujourd'hui</h1>
-        <div class="version-tag">v3.0 — Moteur commun garde-engine.js</div>
+        <div class="version-tag">v3.1 — Correction heure de consultation (bascules à midi)</div>
         <div class="hero">
             <div class="hero-date" id="t-date"></div>
             <div class="circle" id="t-circle"></div>
@@ -218,7 +218,7 @@ import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/f
 import { getCustody, d2s, s2d, isoWeek, getPH, getFerieName, state, setExceptions, syncHebcal, syncSchoolCal } from './garde-engine.js';
 
 /* ═══════════════════════════════════════════════════════
-   GARDE GABRIEL — V3.0 : toute la logique de garde vit dans garde-engine.js
+   GARDE GABRIEL — V3.1 : toute la logique de garde vit dans garde-engine.js
    (partagé avec jours_libres.html). Ce fichier ne contient plus que l'interface.
    ═══════════════════════════════════════════════════════ */
 
