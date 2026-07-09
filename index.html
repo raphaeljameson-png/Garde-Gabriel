@@ -94,7 +94,7 @@
         .print-header { display: none; text-align: center; font-size: 24px; font-weight: bold; margin-bottom: 20px; }
         @media print {
             * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-            .tabbar, .btn, .seg-ctrl, .cal-nav button, h1, .version-tag, .sync-info, .hero, .export-section { display: none !important; }
+            .tabbar, .btn, .seg-ctrl, .cal-nav button, h1, .version-tag, .sync-info, .hero, .export-section, #auth-status { display: none !important; }
             body, .app { background: white !important; box-shadow: none !important; padding: 0 !important; color: black !important; }
             .view { display: none !important; padding: 0 !important; } 
             .view.on { display: block !important; }
@@ -110,13 +110,15 @@
 <div class="app">
     <div id="v-today" class="view on">
         <h1>Aujourd'hui</h1>
-        <div class="version-tag">v3.1 — Correction heure de consultation (bascules à midi)</div>
+        <div class="version-tag">v3.2 — Connexion Google (fin du lien spécial)</div>
         <div class="hero">
             <div class="hero-date" id="t-date"></div>
             <div class="circle" id="t-circle"></div>
             <div class="hero-reason" id="t-reason"></div>
         </div>
-        <button id="btn-force" class="btn btn-outline" onclick="forceToday()">Forcer un changement exceptionnel</button>
+        <button id="btn-force" class="btn btn-outline" style="display:none" onclick="forceToday()">Forcer un changement exceptionnel</button>
+        <button id="btn-auth" class="btn btn-outline" onclick="toggleAuth()">Se connecter (administrateur)</button>
+        <div id="auth-status" style="text-align:center;font-size:11px;color:var(--muted);margin-top:6px"></div>
         <h2 style="margin-top:22px">À venir</h2>
         <div class="card" id="upcoming"></div>
     </div>
@@ -215,33 +217,23 @@
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { getCustody, d2s, s2d, isoWeek, getPH, getFerieName, state, setExceptions, syncHebcal, syncSchoolCal } from './garde-engine.js';
 
 /* ═══════════════════════════════════════════════════════
-   GARDE GABRIEL — V3.1 : toute la logique de garde vit dans garde-engine.js
-   (partagé avec jours_libres.html). Ce fichier ne contient plus que l'interface.
+   GARDE GABRIEL — V3.2 : logique de garde dans garde-engine.js (partagé),
+   administration par connexion Google (Firebase Auth) — l'ancien lien
+   « ?mode=papa » est supprimé.
    ═══════════════════════════════════════════════════════ */
 
-// --- GESTION DES DROITS (LIEN MAGIQUE) ---
-const urlParams = new URLSearchParams(window.location.search);
-if(urlParams.get('mode') === 'papa') {
-    localStorage.setItem('gabriel_admin', 'true');
-    window.history.replaceState({}, document.title, window.location.pathname);
-}
-const isAdmin = localStorage.getItem('gabriel_admin') === 'true';
-
-if(!isAdmin) {
-    document.getElementById('btn-force').style.display = 'none';
-}
-
-if(localStorage.getItem('app_version')!=='v32'){
-    ['gabriel_school_holidays','gabriel_religious_holidays','gabriel_last_sync','gabriel_pont_ranges','gabriel_school_last_sync'].forEach(k=>localStorage.removeItem(k));
-    localStorage.setItem('app_version','v32');
+if(localStorage.getItem('app_version')!=='v33'){
+    ['gabriel_school_holidays','gabriel_religious_holidays','gabriel_last_sync','gabriel_pont_ranges','gabriel_school_last_sync','gabriel_admin'].forEach(k=>localStorage.removeItem(k));
+    localStorage.setItem('app_version','v33');
 }
 
 setExceptions(JSON.parse(localStorage.getItem('gabriel_exceptions')||'{}'));
 
-// --- FIREBASE CONFIGURATION ---
+// --- FIREBASE ---
 const firebaseConfig = {
   apiKey: "AIzaSyDlqyLy8Uy2mXXRruuFJmEEX6vZ_InQ1JA",
   authDomain: "garde-gabriel.firebaseapp.com",
@@ -250,10 +242,47 @@ const firebaseConfig = {
   messagingSenderId: "781312886263",
   appId: "1:781312886263:web:3a749e6ef8e52cc6f99af2"
 };
-
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const docRef = doc(db, "garde", "exceptions");
+
+/* --- AUTHENTIFICATION GOOGLE (remplace l'ancien lien spécial) ---
+   Seuls les comptes listés ci-dessous obtiennent le mode administrateur.
+   La protection effective est assurée par les règles Firestore côté serveur. */
+const ADMIN_EMAILS = ['raphaeljameson@gmail.com'];
+const auth = getAuth(app);
+let isAdmin = false;
+
+function updateAuthUI(u){
+    const bf=document.getElementById('btn-force');
+    const ba=document.getElementById('btn-auth');
+    const st=document.getElementById('auth-status');
+    if(bf) bf.style.display = isAdmin ? 'block' : 'none';
+    if(!ba||!st) return;
+    if(u){
+        ba.textContent='Se déconnecter';
+        st.textContent = isAdmin ? `Connecté : ${u.email} — mode administrateur` : `Connecté : ${u.email} — lecture seule`;
+    }else{
+        ba.textContent='Se connecter (administrateur)';
+        st.textContent='';
+    }
+}
+
+onAuthStateChanged(auth,(u)=>{
+    isAdmin = !!u && ADMIN_EMAILS.includes((u.email||'').toLowerCase());
+    updateAuthUI(u);
+});
+getRedirectResult(auth).catch(()=>{});
+
+async function toggleAuth(){
+    if(auth.currentUser){ await signOut(auth); return; }
+    const provider=new GoogleAuthProvider();
+    try{ await signInWithPopup(auth,provider); }
+    catch(e){
+        try{ await signInWithRedirect(auth,provider); }
+        catch(e2){ alert("Connexion impossible : "+(e2&&e2.message?e2.message:e2)); }
+    }
+}
 
 onSnapshot(docRef, (snap) => {
     if (snap.exists()) {
@@ -267,15 +296,16 @@ onSnapshot(docRef, (snap) => {
             const lbl = document.getElementById('sync-lbl');
             if(lbl) lbl.textContent = 'Synchronisé Cloud ⚡';
         }
-    } else if (isAdmin) {
-        setDoc(docRef, state.exceptions).catch(e => console.error(e));
     }
 });
 
 const saveEx=()=> {
     if(!isAdmin) return;
     localStorage.setItem('gabriel_exceptions',JSON.stringify(state.exceptions));
-    setDoc(docRef, state.exceptions).catch(e => console.error("Erreur Firebase:", e));
+    setDoc(docRef, state.exceptions).catch(e => {
+        console.error("Erreur Firebase:", e);
+        alert("Écriture refusée par le serveur — vérifie que tu es connecté avec le compte administrateur.");
+    });
 };
 
 function renderToday(){
@@ -370,7 +400,7 @@ function renderYear(){
 
 function toggleDay(ds){
     if(!isAdmin) {
-        alert("Mode lecture seule : Vous consultez le calendrier de Gabriel.");
+        alert("Mode lecture seule : connectez-vous avec le compte administrateur pour modifier.");
         return;
     }
     if(state.exceptions[ds]){
@@ -584,6 +614,7 @@ function renderAll(){
 }
 
 window.forceToday = forceToday;
+window.toggleAuth = toggleAuth;
 window.chMonth = chMonth;
 window.goToday = goToday;
 window.chYear = chYear;
