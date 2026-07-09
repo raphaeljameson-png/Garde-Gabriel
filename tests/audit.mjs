@@ -59,6 +59,15 @@ if(online){
  ["2028-07-22","Papa"],["2028-08-05","Maman"],["2028-08-19","Papa"]
 ].forEach(([ds,w])=>chk(`${ds} = ${w}`, who(ds)===w));
 
+/* Indépendance à l'heure de consultation (régression v3.1) : le résultat de
+   getCustody doit être identique à 0h, 9h, 12h, 15h et 23h, y compris sur les
+   jours de bascule (samedis d'été, milieux et bornes de vacances). */
+for(const ds of ["2026-07-18","2026-08-01","2026-08-15","2026-08-31","2026-07-03","2026-07-04","2026-04-25","2027-02-13","2026-09-11"]){
+    const [y,m,j]=ds.split('-').map(Number);
+    const at=h=>getCustody(new Date(y,m-1,j,h,30,0)).who;
+    chk(`Indépendance à l'heure — ${ds}`, at(0)===at(9)&&at(9)===at(12)&&at(12)===at(15)&&at(15)===at(23));
+}
+
 /* Invariant « jours ordinaires » : hors vacances/fêtes/fériés/FdM-FdP,
    Papa = week-ends des semaines paires (ven-sam-dim) + mercredi des semaines impaires. */
 let scanned=0;

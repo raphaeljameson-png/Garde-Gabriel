@@ -9,6 +9,8 @@
    les dates de secours locales ne servent que pour les années non publiées.
    Été : blocs de 14 jours ancrés sur le premier samedi des vacances,
    passages de bras toujours le samedi (1er bloc flexible).
+   v3.1 : getCustody normalise toute date à midi — résultat indépendant de
+   l'heure de consultation.
    ═══════════════════════════════════════════════════════ */
 
 export const d2s=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
@@ -127,7 +129,14 @@ export function isPontVaque(ds){
     return !state.pontRanges.some(p=>p.s.slice(0,4)===ds.slice(0,4));
 }
 
-export function getCustody(date){
+export function getCustody(dateInput){
+    /* Normalisation à MIDI : le résultat ne doit jamais dépendre de l'heure de
+       consultation. Toutes les bornes internes (samedis de bascule, milieux et
+       limites de vacances) sont ancrées à 12h ; sans cette normalisation, une
+       consultation le matin décalait les passages du samedi au dimanche dans
+       « À venir », et une consultation l'après-midi sortait le dernier jour
+       des vacances de l'été. */
+    const date=new Date(dateInput.getFullYear(),dateInput.getMonth(),dateInput.getDate(),12,0,0);
     const ds=d2s(date);
     const yr=date.getFullYear();
     const dow=date.getDay();
